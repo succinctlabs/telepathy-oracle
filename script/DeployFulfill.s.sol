@@ -12,6 +12,6 @@ contract DeployFulfillScript is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address succinct = vm.envAddress("SUCCINCT_ADDRESS");
-        TelepathyOracleFulfill fulfill = new TelepathyOracleFulfill(succinct);
+        new TelepathyOracleFulfill(succinct);
     }
 }

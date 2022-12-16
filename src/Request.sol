@@ -91,7 +91,7 @@ contract TelepathyOracleRequest {
         bytes calldata data
     ) public {
         // validate with light client ala targetamb
-        (messageNonce,,,,,) =
+        (uint256 messageNonce,,,,,) =
             abi.decode(messageBytes, (uint256, address, address, uint16, uint256, bytes));
         bytes32 messageRoot = keccak256(messageBytes);
         {
