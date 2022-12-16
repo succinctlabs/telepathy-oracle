@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.14;
 
 interface IRequest {
     function requestView(
@@ -18,20 +18,12 @@ contract DummyCallback {
         sum += num;
     }
 
-    function requestGetNumber(
-        address requester,
-        address target,
-        bytes4 selector,
-        uint256 gasLimit
-    ) public returns (bytes memory) {
+    function requestGetNumber(address requester, address target, bytes4 selector, uint256 gasLimit)
+        public
+        returns (bytes memory)
+    {
         return
-            IRequest(requester).requestView(
-                this.addToSum.selector,
-                target,
-                selector,
-                "",
-                gasLimit
-            );
+            IRequest(requester).requestView(this.addToSum.selector, target, selector, "", gasLimit);
     }
 }
 

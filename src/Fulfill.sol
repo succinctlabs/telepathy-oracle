@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.14;
 
 import {IBroadcaster} from "./interfaces/IBroadcaster.sol";
 
 /**
- @dev Deploy on Ethereum. Fulfills requests to view functions from the 
- TelepathyOracleRequest contract and returns result on Telepathy
+ * @dev Deploy on Ethereum. Fulfills requests to view functions from the
+ *  TelepathyOracleRequest contract and returns result on Telepathy
  */
 contract TelepathyOracleFulfill {
     IBroadcaster succinct;
@@ -17,17 +17,10 @@ contract TelepathyOracleFulfill {
         succinct = IBroadcaster(_succinct);
     }
 
-    function fulfillRequest(address target, bytes calldata data)
-        external
-        returns (bytes32)
-    {
+    function fulfillRequest(address target, bytes calldata data) external returns (bytes32) {
         // unwrap data
-        (
-            uint256 requestNonce,
-            address receiver,
-            uint256 gasLimit,
-            bytes memory callData
-        ) = abi.decode(data, (uint256, address, uint256, bytes));
+        (uint256 requestNonce, address receiver, uint256 gasLimit, bytes memory callData) =
+            abi.decode(data, (uint256, address, uint256, bytes));
 
         // make view call
         (bool success, bytes memory result) = target.call(callData);

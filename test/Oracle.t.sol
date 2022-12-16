@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.14;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
@@ -18,10 +18,12 @@ contract OracleTtest is Test {
     DummyCallback public callbackContract;
     DummyView public viewContract;
 
+    address lightClient = address(5); // TODO
+
     function setUp() public {
         sourceAMB = new SourceAMB();
         fulfiller = new TelepathyOracleFulfill(address(sourceAMB));
-        requester = new TelepathyOracleRequest(address(fulfiller));
+        requester = new TelepathyOracleRequest(address(fulfiller), lightClient, address(sourceAMB));
 
         callbackContract = new DummyCallback();
         viewContract = new DummyView();
@@ -30,27 +32,18 @@ contract OracleTtest is Test {
     function testRequestView() public {
         // request view
         bytes memory data = callbackContract.requestGetNumber(
-            address(requester),
-            address(viewContract),
-            viewContract.getNumber.selector,
-            GAS_LIMIT
+            address(requester), address(viewContract), viewContract.getNumber.selector, GAS_LIMIT
         );
 
         // calculate messageroot
-        bytes32 messageRoot = fulfiller.fulfillRequest(
-            address(viewContract),
-            data
-        );
+        bytes32 messageRoot = fulfiller.fulfillRequest(address(viewContract), data);
 
         // calculate return data
-        bytes memory callData = abi.encode(
-            requester.nonce(),
-            abi.encode(viewContract.getNumber())
-        );
+        bytes memory callData = abi.encode(requester.nonce(), abi.encode(viewContract.getNumber()));
         // assert correct return message
         assertTrue(
-            messageRoot ==
-                keccak256(
+            messageRoot
+                == keccak256(
                     abi.encode(
                         sourceAMB.nonce() - 1,
                         address(fulfiller),

@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.14;
+
+import "./libraries/MerklePatriciaTrie.sol";
+import "./interfaces/ILightClient.sol";
 
 /**
- @dev deploy on an alt-evm chain, make a request for a view function 
- or storage slot on Ethereum and have it fulfilled via Telepathy.
+ * @dev deploy on an alt-evm chain, make a request for a view function
+ *  or storage slot on Ethereum and have it fulfilled via Telepathy.
  */
 contract TelepathyOracleRequest {
     address fulfiller;
-    address lightClient;
+    ILightClient lightClient;
+    address sourceAMB;
     uint256 public nonce;
     mapping(uint256 => Request) public requests;
 
@@ -18,17 +22,17 @@ contract TelepathyOracleRequest {
 
     event RequestSent(uint256 indexed nonce, address target, bytes data);
     event StorageRequestSent(
-        uint256 indexed nonce,
-        address l1Address,
-        uint256 storageSlot,
-        uint256 blockNumber
+        uint256 indexed nonce, address l1Address, uint256 storageSlot, uint256 blockNumber
     );
 
     error CallFailed(bytes callData);
+    error NotFulfiller(address srcAddress);
+    error InvalidMessageHash(bytes32 messageRoot);
 
-    constructor(address _fulfiller, address _lightClient) {
+    constructor(address _fulfiller, address _lightClient, address _sourceAMB) {
         fulfiller = _fulfiller;
-        lightClient = _lightClient;
+        lightClient = ILightClient(_lightClient);
+        sourceAMB = _sourceAMB;
     }
 
     /**
@@ -49,33 +53,17 @@ contract TelepathyOracleRequest {
         requests[++nonce] = Request(msg.sender, callbackSelector);
 
         bytes memory callData = abi.encodeWithSelector(selector, data);
-        bytes memory fullData = abi.encode(
-            nonce,
-            address(this),
-            gasLimit,
-            callData
-        );
+        bytes memory fullData = abi.encode(nonce, address(this), gasLimit, callData);
 
         emit RequestSent(nonce, target, fullData);
         return fullData;
     }
 
-    function receiveSuccinct(address srcAddress, bytes calldata data)
-        external
-    {
-        require(srcAddress == fulfiller, "Not fulfiller");
-        (uint256 requestNonce, bytes memory result) = abi.decode(
-            data,
-            (uint256, bytes)
-        );
-
-        Request storage req = requests[requestNonce];
-        (bool success, ) = req.sender.call(
-            abi.encodePacked(req.callbackSelector, result)
-        );
-        if (!success) {
-            revert CallFailed(data);
+    function receiveSuccinct(address srcAddress, bytes calldata data) external {
+        if (srcAddress != fulfiller) {
+            revert NotFulfiller(srcAddress);
         }
+        _performCallback(data);
     }
 
     /**
@@ -103,29 +91,30 @@ contract TelepathyOracleRequest {
         bytes calldata data
     ) public {
         // validate with light client ala targetamb
+        (messageNonce,,,,,) =
+            abi.decode(messageBytes, (uint256, address, address, uint16, uint256, bytes));
+        bytes32 messageRoot = keccak256(messageBytes);
         {
             bytes32 executionStateRoot = lightClient.executionStateRoots(slot);
             bytes32 storageRoot = MPT.verifyAccount(accountProof, sourceAMB, executionStateRoot);
-            bytes32 slotKey = keccak256(abi.encode(keccak256(abi.encode(message.nonce, 0))));
+            bytes32 slotKey = keccak256(abi.encode(keccak256(abi.encode(messageNonce, 0))));
             uint256 slotValue = MPT.verifyStorage(slotKey, storageRoot, storageProof);
 
             if (bytes32(slotValue) != messageRoot) {
-                revert("Invalid message hash.");
+                revert InvalidMessageHash(messageRoot);
             }
         }
-        
-        // do call back
-         (uint256 requestNonce, bytes memory result) = abi.decode(
-            data,
-            (uint256, bytes)
-        );
+
+        _performCallback(data);
+    }
+
+    function _performCallback(bytes calldata data) internal {
+        (uint256 requestNonce, bytes memory result) = abi.decode(data, (uint256, bytes));
 
         Request storage req = requests[requestNonce];
-        (bool success, ) = req.sender.call(
-            abi.encodePacked(req.callbackSelector, result)
-        );
+        (bool success,) = req.sender.call(abi.encodePacked(req.callbackSelector, result));
         if (!success) {
             revert CallFailed(data);
         }
-    }    
+    }
 }
