@@ -5,3 +5,6 @@
 [submodule "lib/Solidity-RLP"]
 	path = lib/Solidity-RLP
 	url = https://github.com/succinctlabs/Solidity-RLP
+[submodule "lib/curve-merkle-oracle"]
+	path = lib/curve-merkle-oracle
+	url = https://github.com/succinctlabs/curve-merkle-oracle
