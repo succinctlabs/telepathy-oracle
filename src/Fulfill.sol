@@ -9,14 +9,21 @@ import {IBroadcaster} from "./interfaces/IBroadcaster.sol";
  */
 contract TelepathyOracleFulfill {
     IBroadcaster succinct;
-    uint16 public immutable chainId = 1;
+    uint16 public targetChainId;
 
     error CallFailed(bytes callData);
 
-    constructor(address _succinct) {
+    constructor(address _succinct, uint16 _targetChainId) {
         succinct = IBroadcaster(_succinct);
+        targetChainId = _targetChainId;
     }
 
+    /**
+     * @notice handles request for view function and send result to telepathy
+     * @param target contract address to call
+     * @param data calldata for view call
+     * @return messageRoot from .send call to AMB
+     */
     function fulfillRequest(address target, bytes calldata data) external returns (bytes32) {
         // unwrap data
         (uint256 requestNonce, address receiver, uint256 gasLimit, bytes memory callData) =
@@ -31,6 +38,6 @@ contract TelepathyOracleFulfill {
         // rewrap nonce with result to send back
         bytes memory returnVal = abi.encode(requestNonce, result);
 
-        return succinct.send(receiver, chainId, gasLimit, returnVal);
+        return succinct.send(receiver, targetChainId, gasLimit, returnVal);
     }
 }

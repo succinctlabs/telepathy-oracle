@@ -9,13 +9,25 @@ interface IRequest {
         bytes memory data,
         uint256 gasLimit
     ) external returns (bytes memory);
+
+    function requestStorage(
+        address l1Address,
+        uint256 storageSlot,
+        uint256 blockNumber,
+        bytes4 callbackSelector
+    ) external;
 }
 
 contract DummyCallback {
     uint256 public sum;
+    uint256 public externalStorageVal;
 
     function addToSum(uint256 num) public {
         sum += num;
+    }
+
+    function saveStorageVal(uint256 val) public {
+        externalStorageVal = val;
     }
 
     function requestGetNumber(address requester, address target, bytes4 selector, uint256 gasLimit)
@@ -24,6 +36,17 @@ contract DummyCallback {
     {
         return
             IRequest(requester).requestView(this.addToSum.selector, target, selector, "", gasLimit);
+    }
+
+    function requestStorage(
+        address requester,
+        address l1Address,
+        uint256 storageSlot,
+        uint256 blockNumber
+    ) public {
+        IRequest(requester).requestStorage(
+            l1Address, storageSlot, blockNumber, this.saveStorageVal.selector
+        );
     }
 }
 

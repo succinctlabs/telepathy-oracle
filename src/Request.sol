@@ -83,6 +83,14 @@ contract TelepathyOracleRequest {
         emit StorageRequestSent(nonce, l1Address, storageSlot, blockNumber);
     }
 
+    /**
+     * @notice verifies storage proof and executes callback from storage request
+     * @param slot storage slot that was read
+     * @param messageBytes data from message
+     * @param accountProof account proof from rpc call
+     * @param storageProof storage proof from rpc call
+     * @param data data from storage slot
+     */
     function receiveStorage(
         uint64 slot,
         bytes calldata messageBytes,
@@ -108,6 +116,10 @@ contract TelepathyOracleRequest {
         _performCallback(data);
     }
 
+    /**
+     * @notice executes the stored callback encoded in the calldata bytes
+     * @param data abi encoded request nonce and bytes returned by external call
+     */
     function _performCallback(bytes calldata data) internal {
         (uint256 requestNonce, bytes memory result) = abi.decode(data, (uint256, bytes));
 

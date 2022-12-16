@@ -22,7 +22,7 @@ contract OracleTtest is Test {
 
     function setUp() public {
         sourceAMB = new SourceAMB();
-        fulfiller = new TelepathyOracleFulfill(address(sourceAMB));
+        fulfiller = new TelepathyOracleFulfill(address(sourceAMB), 1);
         requester = new TelepathyOracleRequest(address(fulfiller), lightClient, address(sourceAMB));
 
         callbackContract = new DummyCallback();
@@ -48,7 +48,7 @@ contract OracleTtest is Test {
                         sourceAMB.nonce() - 1,
                         address(fulfiller),
                         address(requester),
-                        fulfiller.chainId(),
+                        fulfiller.targetChainId(),
                         GAS_LIMIT,
                         callData
                     )
@@ -59,5 +59,18 @@ contract OracleTtest is Test {
 
         // assert callback called
         assertTrue(callbackContract.sum() == 1);
+    }
+
+    function testRequestStorage() public {
+        // request storage
+        address l1Address;
+        uint256 storageSlot;
+        uint256 blockNumber;
+        bytes4 callbackSelector;
+        requester.requestStorage(l1Address, storageSlot, blockNumber, callbackSelector);
+
+        // setup light client with verified roots
+        // get storage proof, account proof
+        // call receive storage
     }
 }
