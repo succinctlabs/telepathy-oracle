@@ -13,11 +13,9 @@ contract DeployRequestScript is Script {
 
         address fulfill = vm.envAddress("FULFILL_ADDRESS");
         address lightClient = vm.envAddress("LIGHT_CLIENT_ADDRESS");
-        address sourceAMB = vm.envAddress("SOURCE_AMB_ADDRESS");
         new TelepathyOracleRequest(
             fulfill,
-            lightClient,
-            sourceAMB
+            lightClient
         );
     }
 }

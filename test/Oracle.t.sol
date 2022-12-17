@@ -23,7 +23,7 @@ contract OracleTtest is Test {
     function setUp() public {
         sourceAMB = new SourceAMB();
         fulfiller = new TelepathyOracleFulfill(address(sourceAMB), 1);
-        requester = new TelepathyOracleRequest(address(fulfiller), lightClient, address(sourceAMB));
+        requester = new TelepathyOracleRequest(address(fulfiller), lightClient);
 
         callbackContract = new DummyCallback();
         viewContract = new DummyView();
@@ -64,7 +64,7 @@ contract OracleTtest is Test {
     function testRequestStorage() public {
         // request storage
         address l1Address;
-        uint256 storageSlot;
+        uint64 storageSlot;
         uint256 blockNumber;
         bytes4 callbackSelector;
         requester.requestStorage(l1Address, storageSlot, blockNumber, callbackSelector);
