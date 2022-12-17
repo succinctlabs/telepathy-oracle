@@ -2,7 +2,8 @@
 pragma solidity ^0.8.14;
 
 interface IRequest {
-    function requestView(
+function requestView(
+        address callbackContract,
         bytes4 callbackSelector,
         address target,
         bytes4 selector,
@@ -35,7 +36,7 @@ contract DummyCallback {
         returns (bytes memory)
     {
         return
-            IRequest(requester).requestView(this.addToSum.selector, target, selector, "", gasLimit);
+            IRequest(requester).requestView(address(this), this.addToSum.selector, target, selector, "", gasLimit);
     }
 
     function requestStorage(
@@ -51,7 +52,7 @@ contract DummyCallback {
 }
 
 contract DummyView {
-    uint256 num = 1;
+    uint256 public num = 1;
 
     function getNumber() public view returns (uint256) {
         return num;

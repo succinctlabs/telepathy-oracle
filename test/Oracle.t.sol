@@ -63,12 +63,6 @@ contract OracleTtest is Test {
 
     function testRequestStorage() public {
         // request storage
-        address l1Address;
-        uint64 storageSlot;
-        uint256 blockNumber;
-        bytes4 callbackSelector;
-        requester.requestStorage(l1Address, storageSlot, blockNumber, callbackSelector);
-
         // setup light client with verified roots
         // get storage proof, account proof
         // call receive storage

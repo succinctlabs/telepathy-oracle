@@ -12,21 +12,28 @@ contract TelepathyOracleRequest {
     address fulfiller;
     ILightClient lightClient;
     uint256 public nonce;
+    uint256 public storageNonce;
     mapping(uint256 => Request) public requests;
+    mapping(uint256 => bytes32) public storageRequests;
 
     struct Request {
-        address sender;
+        address callbackContract;
         bytes4 callbackSelector;
     }
 
     event RequestSent(uint256 indexed nonce, address target, bytes data);
     event StorageRequestSent(
-        uint256 indexed nonce, address l1Address, uint64 storageSlot, uint256 blockNumber
+        uint256 indexed nonce,
+        address l1Address,
+        uint64 storageSlot,
+        uint256 blockNumber,
+        bytes4 callbackSelector,
+        address callbackContract
     );
 
-    error CallFailed(bytes callData);
+    error CallFailed(uint256 nonce);
     error NotFulfiller(address srcAddress);
-    error InvalidMessageHash(bytes32 messageRoot);
+    error InvalidData(bytes32 data);
     error InvalidNonce(uint256 nonce);
 
     constructor(address _fulfiller, address _lightClient) {
@@ -43,13 +50,14 @@ contract TelepathyOracleRequest {
      * @param gasLimit gas limit for callback
      */
     function requestView(
+        address callbackContract,
         bytes4 callbackSelector,
         address target,
         bytes4 selector,
         bytes memory data,
         uint256 gasLimit
     ) external returns (bytes memory) {
-        requests[++nonce] = Request(msg.sender, callbackSelector);
+        requests[++nonce] = Request(callbackContract, callbackSelector);
 
         bytes memory callData = abi.encodeWithSelector(selector, data);
         bytes memory fullData = abi.encode(nonce, address(this), gasLimit, callData);
@@ -64,10 +72,11 @@ contract TelepathyOracleRequest {
         }
         (uint256 requestNonce, bytes memory result) = abi.decode(data, (uint256, bytes));
         Request storage req = requests[requestNonce];
-        (bool success,) = req.sender.call(abi.encodePacked(req.callbackSelector, result));
+        (bool success,) = req.callbackContract.call(abi.encodePacked(req.callbackSelector, result));
         if (!success) {
-            revert CallFailed(data);
+            revert CallFailed(requestNonce);
         }
+        delete requests[requestNonce];
     }
 
     /**
@@ -81,52 +90,61 @@ contract TelepathyOracleRequest {
         address l1Address,
         uint64 storageSlot,
         uint256 blockNumber,
-        bytes4 callbackSelector
+        bytes4 callbackSelector,
+        address callbackContract
     ) external {
-        uint256 storageRequestNonce =
-            uint256(keccak256(abi.encodePacked(l1Address, storageSlot, msg.sender)));
-        requests[storageRequestNonce] = Request(msg.sender, callbackSelector);
-        emit StorageRequestSent(storageRequestNonce, l1Address, storageSlot, blockNumber);
+        storageRequests[++storageNonce] =
+            keccak256(abi.encodePacked(l1Address, storageSlot, callbackSelector, callbackContract));
+        emit StorageRequestSent(
+            storageNonce, l1Address, storageSlot, blockNumber, callbackSelector, callbackContract
+            );
     }
 
     /**
      * @notice verifies storage proof and executes callback from storage request
-     * @param slot storage slot that was read
-     * @param messageBytes data from message
+     * @param requestNonce nonce of storage request
+     * @param l1Address contract that was read
+     * @param storageSlot storage slot that was read
+     * @param callbackSelector function selector on sender contract to callback with result
+     * @param callbackContract contract to callback with result
      * @param accountProof account proof from rpc call
      * @param storageProof storage proof from rpc call
+     * @param dataAtSlot data at storage slot
+     * @param slotKey slot key
      */
     function receiveStorage(
         uint256 requestNonce,
         address l1Address,
-        uint64 slot,
-        bytes calldata messageBytes,
+        uint64 storageSlot,
+        bytes4 callbackSelector,
+        address callbackContract,
         bytes[] calldata accountProof,
-        bytes[] calldata storageProof
+        bytes[] calldata storageProof,
+        bytes32 dataAtSlot,
+        bytes32 slotKey
     ) public {
         // validate with light client ala targetamb
-        (uint256 messageNonce,,,,,) =
-            abi.decode(messageBytes, (uint256, address, address, uint16, uint256, bytes));
-        bytes32 messageRoot = keccak256(messageBytes);
         {
-            bytes32 executionStateRoot = lightClient.executionStateRoots(slot);
+            bytes32 executionStateRoot = lightClient.executionStateRoots(storageSlot);
             bytes32 storageRoot = MPT.verifyAccount(accountProof, l1Address, executionStateRoot);
-            bytes32 slotKey = keccak256(abi.encode(keccak256(abi.encode(messageNonce, 0))));
-            uint256 slotValue = MPT.verifyStorage(slotKey, storageRoot, storageProof);
+            bytes32 slotValue = bytes32(MPT.verifyStorage(slotKey, storageRoot, storageProof));
 
-            if (bytes32(slotValue) != messageRoot) {
-                revert InvalidMessageHash(messageRoot);
+            if (slotValue != dataAtSlot) {
+                revert InvalidData(dataAtSlot);
             }
         }
 
         // execute callback
-        Request storage req = requests[requestNonce];
-        if (requestNonce != uint256(keccak256(abi.encodePacked(l1Address, slot, req.sender)))) {
+        bytes32 storedHash = storageRequests[requestNonce];
+        bytes32 callDataHash =
+            keccak256(abi.encodePacked(l1Address, storageSlot, callbackSelector, callbackContract));
+        if (storedHash != callDataHash) {
             revert InvalidNonce(requestNonce);
         }
-        (bool success,) = req.sender.call(abi.encodePacked(req.callbackSelector, messageBytes));
+        (bool success,) = callbackContract.call(abi.encodePacked(callbackSelector, dataAtSlot));
         if (!success) {
-            revert CallFailed(messageBytes);
+            revert CallFailed(requestNonce);
         }
+        delete storageRequests[requestNonce];
     }
 }
