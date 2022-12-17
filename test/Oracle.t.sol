@@ -36,10 +36,20 @@ contract OracleTtest is Test {
         );
 
         // calculate messageroot
-        bytes32 messageRoot = fulfiller.fulfillRequest(address(viewContract), data);
+        bytes32 messageRoot = fulfiller.fulfillRequest(
+            address(viewContract),
+            data,
+            address(callbackContract),
+            callbackContract.addToSum.selector
+        );
 
         // calculate return data
-        bytes memory callData = abi.encode(requester.nonce(), abi.encode(viewContract.getNumber()));
+        bytes memory callData = abi.encode(
+            requester.nonce(),
+            address(callbackContract),
+            callbackContract.addToSum.selector,
+            abi.encode(viewContract.getNumber())
+        );
         // assert correct return message
         assertTrue(
             messageRoot

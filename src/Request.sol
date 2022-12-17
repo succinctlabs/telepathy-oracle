@@ -13,15 +13,16 @@ contract TelepathyOracleRequest {
     ILightClient lightClient;
     uint256 public nonce;
     uint256 public storageNonce;
-    mapping(uint256 => Request) public requests;
     mapping(uint256 => bytes32) public storageRequests;
+    mapping(uint256 => bytes32) public viewRequests;
 
-    struct Request {
-        address callbackContract;
-        bytes4 callbackSelector;
-    }
-
-    event RequestSent(uint256 indexed nonce, address target, bytes data);
+    event ViewRequestSent(
+        uint256 indexed nonce,
+        address target,
+        bytes data,
+        address callbackContract,
+        bytes4 callbackSelector
+    );
     event StorageRequestSent(
         uint256 indexed nonce,
         address l1Address,
@@ -57,12 +58,13 @@ contract TelepathyOracleRequest {
         bytes memory data,
         uint256 gasLimit
     ) external returns (bytes memory) {
-        requests[++nonce] = Request(callbackContract, callbackSelector);
+        nonce++;
+        viewRequests[nonce] = keccak256(abi.encodePacked(nonce, callbackContract, callbackSelector));
 
         bytes memory callData = abi.encodeWithSelector(selector, data);
         bytes memory fullData = abi.encode(nonce, address(this), gasLimit, callData);
 
-        emit RequestSent(nonce, target, fullData);
+        emit ViewRequestSent(nonce, target, fullData, callbackContract, callbackSelector);
         return fullData;
     }
 
@@ -70,13 +72,27 @@ contract TelepathyOracleRequest {
         if (srcAddress != fulfiller) {
             revert NotFulfiller(srcAddress);
         }
-        (uint256 requestNonce, bytes memory result) = abi.decode(data, (uint256, bytes));
-        Request storage req = requests[requestNonce];
-        (bool success,) = req.callbackContract.call(abi.encodePacked(req.callbackSelector, result));
+        (
+            uint256 requestNonce,
+            address callbackContract,
+            bytes4 callbackSelector,
+            bytes memory result
+        ) = abi.decode(data, (uint256, address, bytes4, bytes));
+
+        // verify nonce
+        bytes32 storedHash = viewRequests[requestNonce];
+        bytes32 callDataHash =
+            keccak256(abi.encodePacked(requestNonce, callbackContract, callbackSelector));
+        if (storedHash != callDataHash) {
+            revert InvalidNonce(requestNonce);
+        }
+
+        // execute callback
+        (bool success,) = callbackContract.call(abi.encodePacked(callbackSelector, result));
         if (!success) {
             revert CallFailed(requestNonce);
         }
-        delete requests[requestNonce];
+        delete viewRequests[requestNonce];
     }
 
     /**
