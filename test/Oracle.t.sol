@@ -10,7 +10,7 @@ import "./testHelpers/Dummy.sol";
 import "./testHelpers/LightClientMock.sol";
 import "./testHelpers/Proofs.sol";
 
-contract OracleTtest is Test {
+contract OracleTest is Test {
     uint256 GAS_LIMIT = 100_000;
     SourceAMB public sourceAMB;
 

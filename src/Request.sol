@@ -59,7 +59,7 @@ contract TelepathyOracleRequest {
     ) external returns (bytes memory) {
         requests[++viewNonce] = Request(callbackContract, callbackSelector);
 
-        bytes memory callData = abi.encodeWithSelector(selector, data);
+        bytes memory callData = abi.encodePacked(selector, data);
         bytes memory fullData = abi.encode(viewNonce, address(this), gasLimit, callData);
 
         emit RequestSent(viewNonce, target, fullData);
