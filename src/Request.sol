@@ -32,6 +32,7 @@ contract TelepathyOracleRequest {
     );
 
     error CallFailed(uint256 nonce);
+    error DirectCallFailed();
     error NotFulfiller(address srcAddress);
     error InvalidData(bytes32 data);
     error InvalidNonce(uint256 nonce);
@@ -106,6 +107,7 @@ contract TelepathyOracleRequest {
      * @param requestNonce nonce of storage request
      * @param l1Address contract that was read
      * @param storageSlot storage slot that was read
+     * @param beaconSlot beacon slot
      * @param callbackSelector function selector on sender contract to callback with result
      * @param callbackContract contract to callback with result
      * @param accountProof account proof from rpc call
@@ -125,15 +127,9 @@ contract TelepathyOracleRequest {
         bytes32 dataAtSlot,
         bytes32 slotKey
     ) public {
-        // validate with light client
-        {
-            bytes32 executionStateRoot = lightClient.executionStateRoots(beaconSlot);
-            bytes32 storageRoot = MPT.verifyAccount(accountProof, l1Address, executionStateRoot);
-            bytes32 slotValue = bytes32(MPT.verifyStorage(slotKey, storageRoot, storageProof));
-            if (slotValue != dataAtSlot) {
-                revert InvalidData(dataAtSlot);
-            }
-        }
+        _validateWithLightClient(
+            l1Address, beaconSlot, accountProof, storageProof, dataAtSlot, slotKey
+        );
 
         // verify nonce
         bytes32 callDataHash =
@@ -147,5 +143,62 @@ contract TelepathyOracleRequest {
             revert CallFailed(requestNonce);
         }
         delete storageRequests[requestNonce];
+    }
+
+    /**
+     * @notice verifies storage proof and executes provided callback in single call
+     * @param l1Address contract that was read
+     * @param beaconSlot beacon slot
+     * @param callbackSelector function selector on sender contract to callback with result
+     * @param callbackContract contract to callback with result
+     * @param accountProof account proof from rpc call
+     * @param storageProof storage proof from rpc call
+     * @param dataAtSlot data at storage slot
+     * @param slotKey slot key
+     */
+    function receiveStorageDirect(
+        address l1Address,
+        uint256 beaconSlot,
+        bytes4 callbackSelector,
+        address callbackContract,
+        bytes[] calldata accountProof,
+        bytes[] calldata storageProof,
+        bytes32 dataAtSlot,
+        bytes32 slotKey
+    ) public {
+        _validateWithLightClient(
+            l1Address, beaconSlot, accountProof, storageProof, dataAtSlot, slotKey
+        );
+
+        // execute callback
+        (bool success,) = callbackContract.call(abi.encodePacked(callbackSelector, dataAtSlot));
+        if (!success) {
+            revert DirectCallFailed();
+        }
+    }
+
+    /**
+     * @notice verifies storage proof
+     * @param l1Address contract that was read
+     * @param beaconSlot beacon slot
+     * @param accountProof account proof from rpc call
+     * @param storageProof storage proof from rpc call
+     * @param dataAtSlot data at storage slot
+     * @param slotKey slot key
+     */
+    function _validateWithLightClient(
+        address l1Address,
+        uint256 beaconSlot,
+        bytes[] calldata accountProof,
+        bytes[] calldata storageProof,
+        bytes32 dataAtSlot,
+        bytes32 slotKey
+    ) internal view {
+        bytes32 executionStateRoot = lightClient.executionStateRoots(beaconSlot);
+        bytes32 storageRoot = MPT.verifyAccount(accountProof, l1Address, executionStateRoot);
+        bytes32 slotValue = bytes32(MPT.verifyStorage(slotKey, storageRoot, storageProof));
+        if (slotValue != dataAtSlot) {
+            revert InvalidData(dataAtSlot);
+        }
     }
 }

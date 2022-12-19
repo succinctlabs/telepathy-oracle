@@ -107,4 +107,40 @@ contract OracleTest is Test {
         // assert callback called
         assertTrue(callbackContract.externalStorageVal() == uint256(dataAtSlot));
     }
+
+    function testReceiveStorageDirect() public {
+        // reading value at first storage slot of UNI token - total supply constant
+        address l1Address = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
+        uint64 storageSlot = 0;
+
+        uint256 beaconSlot = 5377744;
+        bytes4 callbackSelector = callbackContract.saveStorageVal.selector;
+
+        // setup light client with verified roots
+        bytes32 executionRoot = 0xd78a6c6b3b75ca85ad35617f689e6b107cbf34ec61a2ae7c54ca1522bde9045f;
+        lightClient.setExecutionRoot(beaconSlot, executionRoot);
+
+        // proofs
+        bytes[] memory accountProof = Proofs.accountProof();
+        bytes[] memory storageProof = Proofs.storageProof();
+
+        // data at slot
+        bytes32 dataAtSlot = bytes32(uint256(1000000000000000000000000000));
+        bytes32 slotKey = keccak256(abi.encode(storageSlot));
+
+        // call receive storage
+        requester.receiveStorageDirect(
+            l1Address,
+            beaconSlot,
+            callbackSelector,
+            address(callbackContract),
+            accountProof,
+            storageProof,
+            dataAtSlot,
+            slotKey
+        );
+
+        // assert callback called
+        assertTrue(callbackContract.externalStorageVal() == uint256(dataAtSlot));
+    }
 }
