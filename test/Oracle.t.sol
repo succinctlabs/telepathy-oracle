@@ -5,8 +5,10 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../src/Fulfill.sol";
 import "../src/Request.sol";
-import "../src/test/SourceAMB.sol";
-import "../src/test/Dummy.sol";
+import "./testHelpers/SourceAMB.sol";
+import "./testHelpers/Dummy.sol";
+import "./testHelpers/LightClientMock.sol";
+import "./testHelpers/Proofs.sol";
 
 contract OracleTtest is Test {
     uint256 GAS_LIMIT = 100_000;
@@ -18,12 +20,13 @@ contract OracleTtest is Test {
     DummyCallback public callbackContract;
     DummyView public viewContract;
 
-    address lightClient = address(5); // TODO
+    LightClientMock lightClient;
 
     function setUp() public {
+        lightClient = new LightClientMock();
         sourceAMB = new SourceAMB();
         fulfiller = new TelepathyOracleFulfill(address(sourceAMB), 1);
-        requester = new TelepathyOracleRequest(address(fulfiller), lightClient);
+        requester = new TelepathyOracleRequest(address(fulfiller), address(lightClient));
 
         callbackContract = new DummyCallback();
         viewContract = new DummyView();
@@ -39,7 +42,8 @@ contract OracleTtest is Test {
         bytes32 messageRoot = fulfiller.fulfillRequest(address(viewContract), data);
 
         // calculate return data
-        bytes memory callData = abi.encode(requester.nonce(), abi.encode(viewContract.getNumber()));
+        bytes memory callData =
+            abi.encode(requester.viewNonce(), abi.encode(viewContract.getNumber()));
         // assert correct return message
         assertTrue(
             messageRoot
@@ -62,9 +66,45 @@ contract OracleTtest is Test {
     }
 
     function testRequestStorage() public {
-        // request storage
+        // reading value at first storage slot of UNI token - total supply constant
+        address l1Address = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
+        uint64 storageSlot = 0;
+
+        uint256 beaconSlot = 5377744;
+        bytes4 callbackSelector = callbackContract.saveStorageVal.selector;
+
         // setup light client with verified roots
-        // get storage proof, account proof
+        bytes32 executionRoot = 0xd78a6c6b3b75ca85ad35617f689e6b107cbf34ec61a2ae7c54ca1522bde9045f;
+        lightClient.setExecutionRoot(beaconSlot, executionRoot);
+
+        // request storage
+        requester.requestStorage(
+            l1Address, storageSlot, beaconSlot, callbackSelector, address(callbackContract)
+        );
+
+        // proofs
+        bytes[] memory accountProof = Proofs.accountProof();
+        bytes[] memory storageProof = Proofs.storageProof();
+
+        // data at slot
+        bytes32 dataAtSlot = bytes32(uint256(1000000000000000000000000000));
+        bytes32 slotKey = keccak256(abi.encode(storageSlot));
+
         // call receive storage
+        requester.receiveStorage(
+            requester.storageNonce(),
+            l1Address,
+            storageSlot,
+            beaconSlot,
+            callbackSelector,
+            address(callbackContract),
+            accountProof,
+            storageProof,
+            dataAtSlot,
+            slotKey
+        );
+
+        // assert callback called
+        assertTrue(callbackContract.externalStorageVal() == uint256(dataAtSlot));
     }
 }

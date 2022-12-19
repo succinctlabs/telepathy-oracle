@@ -11,7 +11,7 @@ import "./interfaces/ILightClient.sol";
 contract TelepathyOracleRequest {
     address fulfiller;
     ILightClient lightClient;
-    uint256 public nonce;
+    uint256 public viewNonce;
     uint256 public storageNonce;
     mapping(uint256 => Request) public requests;
     mapping(uint256 => bytes32) public storageRequests;
@@ -21,12 +21,12 @@ contract TelepathyOracleRequest {
         bytes4 callbackSelector;
     }
 
-    event RequestSent(uint256 indexed nonce, address target, bytes data);
+    event RequestSent(uint256 indexed viewNonce, address target, bytes data);
     event StorageRequestSent(
-        uint256 indexed nonce,
+        uint256 indexed storageNonce,
         address l1Address,
         uint64 storageSlot,
-        uint256 blockNumber,
+        uint256 beaconSlot,
         bytes4 callbackSelector,
         address callbackContract
     );
@@ -57,12 +57,12 @@ contract TelepathyOracleRequest {
         bytes memory data,
         uint256 gasLimit
     ) external returns (bytes memory) {
-        requests[++nonce] = Request(callbackContract, callbackSelector);
+        requests[++viewNonce] = Request(callbackContract, callbackSelector);
 
         bytes memory callData = abi.encodeWithSelector(selector, data);
-        bytes memory fullData = abi.encode(nonce, address(this), gasLimit, callData);
+        bytes memory fullData = abi.encode(viewNonce, address(this), gasLimit, callData);
 
-        emit RequestSent(nonce, target, fullData);
+        emit RequestSent(viewNonce, target, fullData);
         return fullData;
     }
 
@@ -83,20 +83,21 @@ contract TelepathyOracleRequest {
      * @notice lets you request a storage slot from eth
      * @param l1Address contract to read from
      * @param storageSlot slot on contract to read
-     * @param blockNumber block number to read at
+     * @param beaconSlot block number to read at
      * @param callbackSelector function selector on sender contract to callback with result
+     * @param callbackContract contract to callback with result
      */
     function requestStorage(
         address l1Address,
         uint64 storageSlot,
-        uint256 blockNumber,
+        uint256 beaconSlot,
         bytes4 callbackSelector,
         address callbackContract
     ) external {
         storageRequests[++storageNonce] =
             keccak256(abi.encodePacked(l1Address, storageSlot, callbackSelector, callbackContract));
         emit StorageRequestSent(
-            storageNonce, l1Address, storageSlot, blockNumber, callbackSelector, callbackContract
+            storageNonce, l1Address, storageSlot, beaconSlot, callbackSelector, callbackContract
             );
     }
 
@@ -116,6 +117,7 @@ contract TelepathyOracleRequest {
         uint256 requestNonce,
         address l1Address,
         uint64 storageSlot,
+        uint256 beaconSlot,
         bytes4 callbackSelector,
         address callbackContract,
         bytes[] calldata accountProof,
@@ -123,24 +125,23 @@ contract TelepathyOracleRequest {
         bytes32 dataAtSlot,
         bytes32 slotKey
     ) public {
-        // validate with light client ala targetamb
+        // validate with light client
         {
-            bytes32 executionStateRoot = lightClient.executionStateRoots(storageSlot);
+            bytes32 executionStateRoot = lightClient.executionStateRoots(beaconSlot);
             bytes32 storageRoot = MPT.verifyAccount(accountProof, l1Address, executionStateRoot);
             bytes32 slotValue = bytes32(MPT.verifyStorage(slotKey, storageRoot, storageProof));
-
             if (slotValue != dataAtSlot) {
                 revert InvalidData(dataAtSlot);
             }
         }
 
-        // execute callback
-        bytes32 storedHash = storageRequests[requestNonce];
+        // verify nonce
         bytes32 callDataHash =
             keccak256(abi.encodePacked(l1Address, storageSlot, callbackSelector, callbackContract));
-        if (storedHash != callDataHash) {
+        if (storageRequests[requestNonce] != callDataHash) {
             revert InvalidNonce(requestNonce);
         }
+        // execute callback
         (bool success,) = callbackContract.call(abi.encodePacked(callbackSelector, dataAtSlot));
         if (!success) {
             revert CallFailed(requestNonce);

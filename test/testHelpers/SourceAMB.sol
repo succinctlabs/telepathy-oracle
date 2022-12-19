@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
-import {IBroadcaster} from "../interfaces/IBroadcaster.sol";
+import {IBroadcaster} from "../../src/interfaces/IBroadcaster.sol";
 
 contract SourceAMB is IBroadcaster {
     mapping(uint256 => bytes32) public messages;
