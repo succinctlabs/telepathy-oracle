@@ -16,7 +16,7 @@ import "../src/ens/ENSReceiver.sol";
 
 contract ENSTest is Test {
     uint256 GAS_LIMIT = 100_000;
-    uint16 targetChainId = 1;
+    uint256 targetChainId = block.chainid;
     SourceAMB public sourceAMB;
 
     TelepathyOracleRequest public requester;
@@ -50,22 +50,21 @@ contract ENSTest is Test {
         ensResolver.setAddr(node, address(0x1234));
 
         // request view
-        bytes memory data = requester.requestView(
-            address(ensReceiver),
-            ensReceiver.receiveENSOwner.selector,
+        bytes memory data = ensReceiver.requestENS(
+            address(requester),
             address(ensFulfiller),
             ensFulfiller.getENSOwner.selector,
-            abi.encode(node),
-            GAS_LIMIT,
-            1
+            node,
+            GAS_LIMIT
         );
 
         // calculate messageroot
         bytes32 messageRoot = fulfiller.fulfillRequest(address(ensFulfiller), data);
 
         // calculate return data
-        bytes memory callData =
-            abi.encode(requester.viewNonce(), abi.encode(ensFulfiller.getENSOwner(node)));
+        bytes memory callData = abi.encode(
+            requester.viewNonce(), targetChainId, abi.encode(ensFulfiller.getENSOwner(node))
+        );
 
         // assert correct return message
         assertTrue(

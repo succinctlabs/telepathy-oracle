@@ -39,7 +39,7 @@ contract TelepathyOracleFulfill {
         }
 
         // rewrap nonce with result to send back
-        bytes memory returnVal = abi.encode(requestNonce, result);
+        bytes memory returnVal = abi.encode(requestNonce, targetChainId, result);
 
         return succinct.send(receiver, targetChainId, gasLimit, returnVal);
     }

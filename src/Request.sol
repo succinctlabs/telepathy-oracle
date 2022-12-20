@@ -4,6 +4,11 @@ pragma solidity ^0.8.14;
 import "./libraries/MerklePatriciaTrie.sol";
 import "./interfaces/ILightClient.sol";
 
+enum Status {
+    SUCCEEDED,
+    FAILED
+}
+
 /**
  * @dev deploy on an alt-evm chain, make a request for a view function
  *  or storage slot on Ethereum and have it fulfilled via Telepathy.
@@ -15,6 +20,9 @@ contract TelepathyOracleRequest {
     uint256 public storageNonce;
     mapping(uint256 => Request) public requests;
     mapping(uint256 => bytes32) public storageRequests;
+
+    mapping(uint256 => Status) public requestResult;
+    mapping(uint256 => Status) public storageRequestResult;
 
     struct Request {
         address callbackContract;
@@ -34,9 +42,15 @@ contract TelepathyOracleRequest {
     error CallFailed(uint256 nonce);
     error DirectCallFailed();
     error NotFulfiller(address srcAddress);
+    error InvalidChainId(uint16 targetChainId);
     error InvalidData(bytes32 data);
     error InvalidNonce(uint256 nonce);
 
+    /**
+     * @dev contract constructor
+     * @param _fulfiller address of the contract that can fulfill requests on Ethereum L1
+     * @param _lightClient address of the light client contract
+     */
     constructor(address _fulfiller, address _lightClient) {
         fulfiller = _fulfiller;
         lightClient = ILightClient(_lightClient);
@@ -56,28 +70,40 @@ contract TelepathyOracleRequest {
         address target,
         bytes4 selector,
         bytes memory data,
-        uint256 gasLimit,
-        uint16 targetChainId
+        uint256 gasLimit
     ) external returns (bytes memory) {
         requests[++viewNonce] = Request(callbackContract, callbackSelector);
 
         bytes memory callData = abi.encodePacked(selector, data);
         bytes memory fullData =
-            abi.encode(viewNonce, address(this), gasLimit, targetChainId, callData);
+            abi.encode(viewNonce, address(this), gasLimit, block.chainid, callData);
 
         emit RequestSent(viewNonce, target, fullData);
         return fullData;
     }
 
+    /**
+     * @dev telepathy relayer calls this function to fulfill a request
+     * @param srcAddress address of the OracleFulfill contract on eth
+     * @param data result of view call
+     */
     function receiveSuccinct(address srcAddress, bytes calldata data) external {
         if (srcAddress != fulfiller) {
             revert NotFulfiller(srcAddress);
         }
-        (uint256 requestNonce, bytes memory result) = abi.decode(data, (uint256, bytes));
+        (uint256 requestNonce, uint16 targetChainId, bytes memory result) =
+            abi.decode(data, (uint256, uint16, bytes));
+
+        if (targetChainId != block.chainid) {
+            revert InvalidChainId(targetChainId);
+        }
+
         Request storage req = requests[requestNonce];
         (bool success,) = req.callbackContract.call(abi.encodePacked(req.callbackSelector, result));
         if (!success) {
-            revert CallFailed(requestNonce);
+            requestResult[requestNonce] = Status.FAILED;
+        } else {
+            requestResult[requestNonce] = Status.SUCCEEDED;
         }
         delete requests[requestNonce];
     }
@@ -115,7 +141,6 @@ contract TelepathyOracleRequest {
      * @param accountProof account proof from rpc call
      * @param storageProof storage proof from rpc call
      * @param dataAtSlot data at storage slot
-     * @param slotKey slot key
      */
     function receiveStorage(
         uint256 requestNonce,
@@ -126,23 +151,28 @@ contract TelepathyOracleRequest {
         address callbackContract,
         bytes[] calldata accountProof,
         bytes[] calldata storageProof,
-        bytes32 dataAtSlot,
-        bytes32 slotKey
+        bytes32 dataAtSlot
     ) public {
+        bytes32 slotKey = keccak256(abi.encode(storageSlot));
         _validateWithLightClient(
             l1Address, beaconSlot, accountProof, storageProof, dataAtSlot, slotKey
         );
 
         // verify nonce
-        bytes32 callDataHash =
-            keccak256(abi.encodePacked(l1Address, storageSlot, callbackSelector, callbackContract));
-        if (storageRequests[requestNonce] != callDataHash) {
+        if (
+            storageRequests[requestNonce]
+                != keccak256(
+                    abi.encodePacked(l1Address, storageSlot, callbackSelector, callbackContract)
+                )
+        ) {
             revert InvalidNonce(requestNonce);
         }
         // execute callback
         (bool success,) = callbackContract.call(abi.encodePacked(callbackSelector, dataAtSlot));
         if (!success) {
-            revert CallFailed(requestNonce);
+            storageRequestResult[requestNonce] = Status.FAILED;
+        } else {
+            storageRequestResult[requestNonce] = Status.SUCCEEDED;
         }
         delete storageRequests[requestNonce];
     }
@@ -150,24 +180,25 @@ contract TelepathyOracleRequest {
     /**
      * @notice verifies storage proof and executes provided callback in single call
      * @param l1Address contract that was read
+     * @param storageSlot storage slot that was read
      * @param beaconSlot beacon slot
      * @param callbackSelector function selector on sender contract to callback with result
      * @param callbackContract contract to callback with result
      * @param accountProof account proof from rpc call
      * @param storageProof storage proof from rpc call
      * @param dataAtSlot data at storage slot
-     * @param slotKey slot key
      */
     function receiveStorageDirect(
         address l1Address,
+        uint64 storageSlot,
         uint256 beaconSlot,
         bytes4 callbackSelector,
         address callbackContract,
         bytes[] calldata accountProof,
         bytes[] calldata storageProof,
-        bytes32 dataAtSlot,
-        bytes32 slotKey
+        bytes32 dataAtSlot
     ) public {
+        bytes32 slotKey = keccak256(abi.encode(storageSlot));
         _validateWithLightClient(
             l1Address, beaconSlot, accountProof, storageProof, dataAtSlot, slotKey
         );

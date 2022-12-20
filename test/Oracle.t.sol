@@ -12,7 +12,7 @@ import "./testHelpers/Proofs.sol";
 
 contract OracleTest is Test {
     uint256 GAS_LIMIT = 100_000;
-    uint16 targetChainId = 1;
+    uint256 targetChainId = block.chainid;
     SourceAMB public sourceAMB;
 
     TelepathyOracleRequest public requester;
@@ -41,8 +41,7 @@ contract OracleTest is Test {
             address(viewContract),
             viewContract.getNumber.selector,
             "",
-            GAS_LIMIT,
-            1
+            GAS_LIMIT
         );
 
         // calculate messageroot
@@ -50,7 +49,7 @@ contract OracleTest is Test {
 
         // calculate return data
         bytes memory callData =
-            abi.encode(requester.viewNonce(), abi.encode(viewContract.getNumber()));
+            abi.encode(requester.viewNonce(), targetChainId, abi.encode(viewContract.getNumber()));
         // assert correct return message
         assertTrue(
             messageRoot
@@ -95,7 +94,6 @@ contract OracleTest is Test {
 
         // data at slot
         bytes32 dataAtSlot = bytes32(uint256(1000000000000000000000000000));
-        bytes32 slotKey = keccak256(abi.encode(storageSlot));
 
         // call receive storage
         requester.receiveStorage(
@@ -107,8 +105,7 @@ contract OracleTest is Test {
             address(callbackContract),
             accountProof,
             storageProof,
-            dataAtSlot,
-            slotKey
+            dataAtSlot
         );
 
         // assert callback called
@@ -133,18 +130,17 @@ contract OracleTest is Test {
 
         // data at slot
         bytes32 dataAtSlot = bytes32(uint256(1000000000000000000000000000));
-        bytes32 slotKey = keccak256(abi.encode(storageSlot));
 
         // call receive storage
         requester.receiveStorageDirect(
             l1Address,
+            storageSlot,
             beaconSlot,
             callbackSelector,
             address(callbackContract),
             accountProof,
             storageProof,
-            dataAtSlot,
-            slotKey
+            dataAtSlot
         );
 
         // assert callback called
