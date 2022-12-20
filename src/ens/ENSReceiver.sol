@@ -18,7 +18,14 @@ interface IRequester {
 contract ENSReceiver {
     address public owner;
 
-    // TODO
+    /**
+     * @dev Request the owner of an ENS name.
+     * @param requester The address of the requester contract.
+     * @param ensFulfiller The address of the ENS fulfiller contract.
+     * @param getENSOwnerSelector The selector of the getENSOwner function on the ENS fulfiller contract.
+     * @param node The ENS node of the name.
+     * @param gasLimit The gas limit for the callback.
+     */
     function requestENS(
         address requester,
         address ensFulfiller,
@@ -36,6 +43,10 @@ contract ENSReceiver {
         );
     }
 
+    /**
+     * @dev Callback function to receive the owner of an ENS name.
+     * @param _owner The owner of the ENS name.
+     */
     function receiveENSOwner(address _owner) external {
         owner = _owner;
         // do something with the owner...

@@ -19,6 +19,10 @@ contract ENSFulfiller {
         registry = _registry;
     }
 
+    /**
+     * @dev get the owner of an ENS name
+     * @param node the ENS node of the name
+     */
     function getENSOwner(bytes32 node) external view returns (address) {
         // call resolver on the ENS registry with the node
         address resolver = IENSRegistry(registry).resolver(node);
