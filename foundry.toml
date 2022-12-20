@@ -11,11 +11,11 @@ func_attrs_with_params_multiline = true
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
 
 [rpc_endpoints]
-eth = "${PROVIDER_1}"
-goerli = "${PROVIDER_5}"
-polygon = "${PROVIDER_137}"
-op = "${PROVIDER_10}"
-arb = "${PROVIDER_42161}"
+eth = "${RPC_1}"
+goerli = "${RPC_5}"
+polygon = "${RPC_137}"
+op = "${RPC_10}"
+arb = "${RPC_42161}"
 
 [etherscan]
 eth = { key = "${ETHERSCAN_API_KEY}" }

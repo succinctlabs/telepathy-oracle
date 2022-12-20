@@ -12,6 +12,7 @@ import "./testHelpers/Proofs.sol";
 
 contract OracleTest is Test {
     uint256 GAS_LIMIT = 100_000;
+    uint16 targetChainId = 1;
     SourceAMB public sourceAMB;
 
     TelepathyOracleRequest public requester;
@@ -25,7 +26,7 @@ contract OracleTest is Test {
     function setUp() public {
         lightClient = new LightClientMock();
         sourceAMB = new SourceAMB();
-        fulfiller = new TelepathyOracleFulfill(address(sourceAMB), 1);
+        fulfiller = new TelepathyOracleFulfill(address(sourceAMB));
         requester = new TelepathyOracleRequest(address(fulfiller), address(lightClient));
 
         callbackContract = new DummyCallback();
@@ -34,8 +35,14 @@ contract OracleTest is Test {
 
     function testRequestView() public {
         // request view
-        bytes memory data = callbackContract.requestGetNumber(
-            address(requester), address(viewContract), viewContract.getNumber.selector, GAS_LIMIT
+        bytes memory data = requester.requestView(
+            address(callbackContract),
+            callbackContract.addToSum.selector,
+            address(viewContract),
+            viewContract.getNumber.selector,
+            "",
+            GAS_LIMIT,
+            1
         );
 
         // calculate messageroot
@@ -52,7 +59,7 @@ contract OracleTest is Test {
                         sourceAMB.nonce() - 1,
                         address(fulfiller),
                         address(requester),
-                        fulfiller.targetChainId(),
+                        targetChainId,
                         GAS_LIMIT,
                         callData
                     )

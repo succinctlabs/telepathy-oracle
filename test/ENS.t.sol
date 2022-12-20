@@ -16,6 +16,7 @@ import "../src/ens/ENSReceiver.sol";
 
 contract ENSTest is Test {
     uint256 GAS_LIMIT = 100_000;
+    uint16 targetChainId = 1;
     SourceAMB public sourceAMB;
 
     TelepathyOracleRequest public requester;
@@ -32,7 +33,7 @@ contract ENSTest is Test {
     function setUp() public {
         lightClient = new LightClientMock();
         sourceAMB = new SourceAMB();
-        fulfiller = new TelepathyOracleFulfill(address(sourceAMB), 1);
+        fulfiller = new TelepathyOracleFulfill(address(sourceAMB));
         requester = new TelepathyOracleRequest(address(fulfiller), address(lightClient));
 
         ensRegistry = new MockENSRegistry();
@@ -55,7 +56,8 @@ contract ENSTest is Test {
             address(ensFulfiller),
             ensFulfiller.getENSOwner.selector,
             abi.encode(node),
-            GAS_LIMIT
+            GAS_LIMIT,
+            1
         );
 
         // calculate messageroot
@@ -73,7 +75,7 @@ contract ENSTest is Test {
                         sourceAMB.nonce() - 1,
                         address(fulfiller),
                         address(requester),
-                        fulfiller.targetChainId(),
+                        targetChainId,
                         GAS_LIMIT,
                         callData
                     )

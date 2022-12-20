@@ -56,12 +56,14 @@ contract TelepathyOracleRequest {
         address target,
         bytes4 selector,
         bytes memory data,
-        uint256 gasLimit
+        uint256 gasLimit,
+        uint16 targetChainId
     ) external returns (bytes memory) {
         requests[++viewNonce] = Request(callbackContract, callbackSelector);
 
         bytes memory callData = abi.encodePacked(selector, data);
-        bytes memory fullData = abi.encode(viewNonce, address(this), gasLimit, callData);
+        bytes memory fullData =
+            abi.encode(viewNonce, address(this), gasLimit, targetChainId, callData);
 
         emit RequestSent(viewNonce, target, fullData);
         return fullData;

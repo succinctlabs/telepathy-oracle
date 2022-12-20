@@ -1,24 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
-interface IRequest {
-    function requestView(
-        address callbackContract,
-        bytes4 callbackSelector,
-        address target,
-        bytes4 selector,
-        bytes memory data,
-        uint256 gasLimit
-    ) external returns (bytes memory);
-
-    function requestStorage(
-        address l1Address,
-        uint256 storageSlot,
-        uint256 blockNumber,
-        bytes4 callbackSelector
-    ) external;
-}
-
 contract DummyCallback {
     uint256 public sum;
     uint256 public externalStorageVal;
@@ -29,15 +11,6 @@ contract DummyCallback {
 
     function saveStorageVal(uint256 val) public {
         externalStorageVal = val;
-    }
-
-    function requestGetNumber(address requester, address target, bytes4 selector, uint256 gasLimit)
-        public
-        returns (bytes memory)
-    {
-        return IRequest(requester).requestView(
-            address(this), this.addToSum.selector, target, selector, "", gasLimit
-        );
     }
 }
 
