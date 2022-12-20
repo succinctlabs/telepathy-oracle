@@ -1,0 +1,2 @@
+telepathy/=lib/telepathy/contracts/src/
+telepathy-test/=lib/telepathy/contracts/test/

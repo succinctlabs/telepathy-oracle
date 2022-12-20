@@ -5,9 +5,9 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../src/Fulfill.sol";
 import "../src/Request.sol";
-import "./testHelpers/SourceAMB.sol";
+import {SourceAMB} from "telepathy/amb/SourceAMB.sol";
 import "./testHelpers/Dummy.sol";
-import "./testHelpers/LightClientMock.sol";
+import "telepathy-test/amb/LightClientMock.sol";
 import "./testHelpers/Proofs.sol";
 
 import "./testHelpers/MockENS.sol";

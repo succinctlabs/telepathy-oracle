@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
-import "./libraries/MerklePatriciaTrie.sol";
-import "./interfaces/ILightClient.sol";
+import "telepathy/amb/libraries/MerklePatriciaTrie.sol";
+import "telepathy/lightclient/interfaces/ILightClient.sol";
 
 enum Status {
     SUCCEEDED,

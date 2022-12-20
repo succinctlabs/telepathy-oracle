@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
-import {IBroadcaster} from "./interfaces/IBroadcaster.sol";
+import {IBroadcaster} from "telepathy/amb/interfaces/IAMB.sol";
 
 /**
  * @dev Deploy on Ethereum. Fulfills requests to view functions from the
