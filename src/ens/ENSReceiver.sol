@@ -21,9 +21,9 @@ contract ENSReceiver {
     /**
      * @dev Request the owner of an ENS name.
      * @param requester The address of the requester contract.
-     * @param ensFulfiller The address of the ENS fulfiller contract.
+     * @param ensFulfiller The address of the ENS fulfiller contract on Ethereum.
      * @param getENSOwnerSelector The selector of the getENSOwner function on the ENS fulfiller contract.
-     * @param node The ENS node of the name.
+     * @param node The ENS node of the name (namehash of .eth string).
      * @param gasLimit The gas limit for the callback.
      */
     function requestENS(
