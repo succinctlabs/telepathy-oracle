@@ -104,8 +104,8 @@ contract TelepathyOracleRequest {
             requestResult[requestNonce] = Status.FAILED;
         } else {
             requestResult[requestNonce] = Status.SUCCEEDED;
+            delete requests[requestNonce];
         }
-        delete requests[requestNonce];
     }
 
     /**
@@ -173,8 +173,8 @@ contract TelepathyOracleRequest {
             storageRequestResult[requestNonce] = Status.FAILED;
         } else {
             storageRequestResult[requestNonce] = Status.SUCCEEDED;
+            delete storageRequests[requestNonce];
         }
-        delete storageRequests[requestNonce];
     }
 
     /**
