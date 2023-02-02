@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {Message} from "telepathy/amb/interfaces/ITelepathy.sol";
 import {MockTelepathy} from "telepathy/amb/mocks/MockAMB.sol";
-import {TelepathyOracle, RequestStatus} from "src/oracle/TelepathyOracle.sol";
+import {TelepathyOracle, RequestStatus, RequestData} from "src/oracle/TelepathyOracle.sol";
 import {TelepathyOracleFulfiller} from "src/oracle/TelepathyOracleFulfiller.sol";
 import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
 
@@ -53,20 +53,19 @@ contract TelepathyOracleTest is Test {
         address targetContract,
         bytes memory targetCalldata,
         address callbackContract
-    ) internal returns (uint256 nonce, bytes32 requestHash) {
-        nonce = oracle.requestCrossChain(
+    ) internal returns (RequestData memory requestData, bytes32 requestHash) {
+        uint256 nonce = oracle.requestCrossChain(
             targetContract,
             targetCalldata,
             callbackContract
         );
-        requestHash = keccak256(
-            abi.encodePacked(
-                nonce,
-                targetContract,
-                targetCalldata,
-                callbackContract
-            )
+        requestData = RequestData(
+            nonce,
+            targetContract,
+            targetCalldata,
+            callbackContract
         );
+        requestHash = keccak256(abi.encode(requestData));
     }
 
     function setUp() public {
@@ -98,29 +97,18 @@ contract TelepathyOracleTest is Test {
             targetCalldata,
             callbackContract
         );
-        uint256 nonce = oracle.requestCrossChain(
+        (RequestData memory requestData, bytes32 requestHash) = makeRequest(
             targetContract,
             targetCalldata,
             callbackContract
         );
-        assertEq(nonce, 1);
-        bytes32 requestHash = keccak256(
-            abi.encodePacked(
-                nonce,
-                targetContract,
-                targetCalldata,
-                callbackContract
-            )
-        );
+        assertEq(requestData.nonce, 1);
         assertTrue(oracle.requests(requestHash) == RequestStatus.PENDING);
 
         fulfiller.fulfillCrossChainRequest(
             ORACLE_CHAIN,
             address(oracle),
-            nonce,
-            targetContract,
-            targetCalldata,
-            callbackContract
+            requestData
         );
 
         sourceAmb.executeNextMessage();
@@ -170,7 +158,7 @@ contract TelepathyOracleTest is Test {
         );
         address callbackContract = address(receiver);
 
-        (, bytes32 requestHash) = makeRequest(
+        (RequestData memory requestData, bytes32 requestHash) = makeRequest(
             targetContract,
             targetCalldata,
             callbackContract
@@ -179,10 +167,7 @@ contract TelepathyOracleTest is Test {
         fulfiller.fulfillCrossChainRequest(
             ORACLE_CHAIN,
             address(oracle),
-            1,
-            targetContract,
-            targetCalldata,
-            callbackContract
+            requestData
         );
         (
             ,
@@ -198,10 +183,7 @@ contract TelepathyOracleTest is Test {
         fulfiller.fulfillCrossChainRequest(
             ORACLE_CHAIN,
             address(oracle),
-            1,
-            targetContract,
-            targetCalldata,
-            callbackContract
+            requestData
         );
         vm.prank(address(targetAmb));
         vm.expectRevert(
@@ -229,19 +211,23 @@ contract TelepathyOracleTest is Test {
             "goodbye world"
         );
 
-        (uint256 nonce, ) = makeRequest(
+        (RequestData memory realRequestData, ) = makeRequest(
             targetContract,
             targetCalldata,
             callbackContract
         );
 
+        RequestData memory fakeRequestData = RequestData(
+            realRequestData.nonce,
+            realRequestData.targetContract,
+            fakeTargetCalldata,
+            realRequestData.callbackContract
+        );
+
         fulfiller.fulfillCrossChainRequest(
             ORACLE_CHAIN,
             address(oracle),
-            nonce,
-            targetContract,
-            fakeTargetCalldata,
-            callbackContract
+            fakeRequestData
         );
         (
             ,
@@ -252,20 +238,13 @@ contract TelepathyOracleTest is Test {
             bytes memory data
         ) = sourceAmb.sentMessages(0);
 
-        bytes32 badRequestHash = keccak256(
-            abi.encodePacked(
-                nonce,
-                targetContract,
-                fakeTargetCalldata,
-                callbackContract
-            )
-        );
+        bytes32 fakeRequestHash = keccak256(abi.encode(fakeRequestData));
 
         vm.prank(address(targetAmb));
         vm.expectRevert(
             abi.encodeWithSelector(
                 TelepathyOracle.RequestNotPending.selector,
-                badRequestHash
+                fakeRequestHash
             )
         );
         oracle.handleTelepathy(sourceChainId, senderAddress, data);

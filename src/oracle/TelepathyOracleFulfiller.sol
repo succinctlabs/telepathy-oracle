@@ -1,6 +1,7 @@
 pragma solidity ^0.8.14;
 
 import {ITelepathyBroadcaster} from "telepathy/amb/interfaces/ITelepathy.sol";
+import {RequestData} from "src/oracle/TelepathyOracle.sol";
 
 contract TelepathyOracleFulfiller {
     ITelepathyBroadcaster telepathyBroadcaster;
@@ -12,26 +13,16 @@ contract TelepathyOracleFulfiller {
     function fulfillCrossChainRequest(
         uint16 _oracleChain,
         address _oracleAddress,
-        uint256 _nonce,
-        address _targetContract,
-        bytes calldata _targetCalldata,
-        address _callbackContract
+        RequestData calldata _requestData
     ) external {
-        (bool success, bytes memory resultData) = _targetContract.call(
-            _targetCalldata
-        );
-        bytes32 requestHash = keccak256(
-            abi.encodePacked(
-                _nonce,
-                _targetContract,
-                _targetCalldata,
-                _callbackContract
-            )
-        );
+        (bool success, bytes memory resultData) = _requestData
+            .targetContract
+            .call(_requestData.targetCalldata);
+        bytes32 requestHash = keccak256(abi.encode(_requestData));
         bytes memory data = abi.encode(
-            _nonce,
+            _requestData.nonce,
             requestHash,
-            _callbackContract,
+            _requestData.callbackContract,
             resultData,
             success
         );

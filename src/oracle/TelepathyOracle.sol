@@ -10,6 +10,13 @@ enum RequestStatus {
     FAILED
 }
 
+struct RequestData {
+    uint256 nonce;
+    address targetContract;
+    bytes targetCalldata;
+    address callbackContract;
+}
+
 contract TelepathyOracle is ITelepathyHandler {
     event CrossChainRequestSent(
         uint256 indexed nonce,
@@ -24,7 +31,7 @@ contract TelepathyOracle is ITelepathyHandler {
     error RequestNotPending(bytes32 requestHash);
 
     /// @notice Maps request hashes to their status
-    /// @dev The hash of a request is keccak256(abi.encodePacked(nonce, targetContract, targetCalldata, callbackContract))
+    /// @dev The hash of a request is keccak256(abi.encode(RequestData))
     mapping(bytes32 => RequestStatus) public requests;
     /// @notice The next nonce to use when sending a cross-chain request
     uint256 public nextNonce = 1;
@@ -53,14 +60,13 @@ contract TelepathyOracle is ITelepathyHandler {
         unchecked {
             nonce = nextNonce++;
         }
-        bytes32 requestHash = keccak256(
-            abi.encodePacked(
-                nonce,
-                _targetContract,
-                _targetCalldata,
-                _callbackContract
-            )
+        RequestData memory requestData = RequestData(
+            nonce,
+            _targetContract,
+            _targetCalldata,
+            _callbackContract
         );
+        bytes32 requestHash = keccak256(abi.encode(requestData));
         requests[requestHash] = RequestStatus.PENDING;
 
         emit CrossChainRequestSent(
