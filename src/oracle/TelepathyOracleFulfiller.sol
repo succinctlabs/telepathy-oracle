@@ -1,23 +1,17 @@
 pragma solidity ^0.8.14;
 
-import "telepathy/amb/interfaces/ITelepathy.sol";
+import {ITelepathyBroadcaster} from "telepathy/amb/interfaces/ITelepathy.sol";
 
-contract CrossChainOracleFulfiller {
-    uint256 requesterChainId;
+contract TelepathyOracleFulfiller {
     address sourceAmb;
-    address requester;
 
-    constructor(
-        uint256 _requesterChainId,
-        address _sourceAmb,
-        address _requester
-    ) {
-        requesterChainId = _requesterChainId;
+    constructor(address _sourceAmb) {
         sourceAmb = _sourceAmb;
-        requester = _requester;
     }
 
     function fulfillCrossChainRequest(
+        uint16 _oracleChain,
+        address _oracleAddress,
         uint256 _nonce,
         address _targetContract,
         bytes4 _targetSelector,
@@ -31,17 +25,21 @@ contract CrossChainOracleFulfiller {
                 _nonce,
                 _targetContract,
                 _targetSelector,
-                _targetData,
-                _callbackContract
+                _callbackContract,
+                _targetData
             )
         );
-        bytes memory data = abi.encodePacked(
+        bytes memory data = abi.encode(
             _nonce,
             requestHash,
             _callbackContract,
             responseData,
             responseSuccess
         );
-        IAMB(sourceAmb).sendViaLog(requesterChainId, requester, data);
+        ITelepathyBroadcaster(sourceAmb).sendViaLog(
+            _oracleChain,
+            _oracleAddress,
+            data
+        );
     }
 }

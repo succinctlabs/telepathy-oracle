@@ -2,3 +2,4 @@ Solidity-RLP/=lib/telepathy/contracts/lib/Solidity-RLP/contracts/
 curve-merkle-oracle/=lib/telepathy/contracts/lib/curve-merkle-oracle/contracts/
 
 telepathy/=lib/telepathy-contracts/src/
+forge-std/=lib/forge-std/src/
