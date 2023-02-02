@@ -14,27 +14,26 @@ contract TelepathyOracleFulfiller {
         address _oracleAddress,
         uint256 _nonce,
         address _targetContract,
-        bytes4 _targetSelector,
-        bytes calldata _targetData,
+        bytes calldata _targetCalldata,
         address _callbackContract
     ) external {
-        (bool responseSuccess, bytes memory responseData) = _targetContract
-            .staticcall(abi.encodeWithSelector(_targetSelector, _targetData));
+        (bool success, bytes memory resultData) = _targetContract.call(
+            _targetCalldata
+        );
         bytes32 requestHash = keccak256(
             abi.encodePacked(
                 _nonce,
                 _targetContract,
-                _targetSelector,
                 _callbackContract,
-                _targetData
+                _targetCalldata
             )
         );
         bytes memory data = abi.encode(
             _nonce,
             requestHash,
             _callbackContract,
-            responseData,
-            responseSuccess
+            resultData,
+            success
         );
         ITelepathyBroadcaster(sourceAmb).sendViaLog(
             _oracleChain,

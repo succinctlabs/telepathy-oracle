@@ -1,4 +1,4 @@
-// SPDX-LicmockDatae-Identifier: UNLICMockDataED
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.14;
 
 import "forge-std/Test.sol";
@@ -9,7 +9,7 @@ import {TelepathyOracle, RequestStatus} from "src/oracle/TelepathyOracle.sol";
 import {TelepathyOracleFulfiller} from "src/oracle/TelepathyOracleFulfiller.sol";
 import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
 
-contract MockData {
+contract MockMainnetData {
     uint256 val = block.timestamp;
 
     function get() public view returns (uint256) {
@@ -37,8 +37,7 @@ contract TelepathyOracleTest is Test {
     event CrossChainRequestSent(
         uint256 indexed nonce,
         address targetContract,
-        bytes4 targetSelector,
-        bytes targetData,
+        bytes targetCalldata,
         address callbackContract
     );
 
@@ -52,24 +51,20 @@ contract TelepathyOracleTest is Test {
 
     function makeRequest(
         address targetContract,
-        bytes4 targetSelector,
-        bytes memory targetData,
+        bytes memory targetCalldata,
         address callbackContract
     ) internal returns (uint256 nonce, bytes32 requestHash) {
         nonce = oracle.requestCrossChain(
             targetContract,
-            targetSelector,
-            targetData,
+            targetCalldata,
             callbackContract
         );
-        console.logBytes(targetData);
         requestHash = keccak256(
             abi.encodePacked(
                 nonce,
                 targetContract,
-                targetSelector,
                 callbackContract,
-                targetData
+                targetCalldata
             )
         );
     }
@@ -87,26 +82,25 @@ contract TelepathyOracleTest is Test {
     }
 
     function testSimple() public {
-        MockData mockData = new MockData();
+        MockMainnetData MockMainnetData = new MockMainnetData();
         MockReceiver receiver = new MockReceiver();
         assertEq(receiver.result(), 0);
-        address targetContract = address(mockData);
-        bytes4 targetSelector = MockData.get.selector;
-        bytes memory targetData = "";
+        address targetContract = address(MockMainnetData);
+        bytes memory targetCalldata = abi.encodeWithSelector(
+            MockMainnetData.get.selector
+        );
         address callbackContract = address(receiver);
 
         vm.expectEmit(true, true, true, false);
         emit CrossChainRequestSent(
             1,
             targetContract,
-            targetSelector,
-            targetData,
+            targetCalldata,
             callbackContract
         );
         uint256 nonce = oracle.requestCrossChain(
             targetContract,
-            targetSelector,
-            targetData,
+            targetCalldata,
             callbackContract
         );
         assertEq(nonce, 1);
@@ -114,9 +108,8 @@ contract TelepathyOracleTest is Test {
             abi.encodePacked(
                 nonce,
                 targetContract,
-                targetSelector,
                 callbackContract,
-                targetData
+                targetCalldata
             )
         );
         assertTrue(oracle.requests(requestHash) == RequestStatus.PENDING);
@@ -126,14 +119,13 @@ contract TelepathyOracleTest is Test {
             address(oracle),
             nonce,
             targetContract,
-            targetSelector,
-            targetData,
+            targetCalldata,
             callbackContract
         );
 
         sourceAmb.executeNextMessage();
 
-        assertEq(receiver.result(), mockData.get());
+        assertEq(receiver.result(), MockMainnetData.get());
     }
 
     function testRevertNotFromAmb() public {
@@ -169,18 +161,18 @@ contract TelepathyOracleTest is Test {
     }
 
     function testRevertReplayResponse() public {
-        MockData mockData = new MockData();
+        MockMainnetData MockMainnetData = new MockMainnetData();
         MockReceiver receiver = new MockReceiver();
         assertEq(receiver.result(), 0);
-        address targetContract = address(mockData);
-        bytes4 targetSelector = MockData.get.selector;
-        bytes memory targetData = "";
+        address targetContract = address(MockMainnetData);
+        bytes memory targetCalldata = abi.encodeWithSelector(
+            MockMainnetData.get.selector
+        );
         address callbackContract = address(receiver);
 
         (uint256 nonce, bytes32 requestHash) = makeRequest(
             targetContract,
-            targetSelector,
-            targetData,
+            targetCalldata,
             callbackContract
         );
 
@@ -189,8 +181,7 @@ contract TelepathyOracleTest is Test {
             address(oracle),
             1,
             targetContract,
-            targetSelector,
-            targetData,
+            targetCalldata,
             callbackContract
         );
         (
@@ -209,8 +200,7 @@ contract TelepathyOracleTest is Test {
             address(oracle),
             1,
             targetContract,
-            targetSelector,
-            targetData,
+            targetCalldata,
             callbackContract
         );
         vm.prank(address(targetAmb));
@@ -224,32 +214,33 @@ contract TelepathyOracleTest is Test {
     }
 
     function testRevertIncorrectResponseData() public {
-        MockData mockData = new MockData();
+        MockMainnetData MockMainnetData = new MockMainnetData();
         MockReceiver receiver = new MockReceiver();
         assertEq(receiver.result(), 0);
-        address targetContract = address(mockData);
-        bytes4 targetSelector = MockData.hashString.selector;
-        bytes memory targetData = abi.encode("hello world");
+        address targetContract = address(MockMainnetData);
+        bytes memory targetCalldata = abi.encodeWithSelector(
+            MockMainnetData.hashString.selector,
+            "hello world"
+        );
         address callbackContract = address(receiver);
 
-        bytes memory fakeData = abi.encode("goodbye world");
+        bytes memory fakeTargetCalldata = abi.encodeWithSelector(
+            MockMainnetData.hashString.selector,
+            "goodbye world"
+        );
 
         (uint256 nonce, bytes32 requestHash) = makeRequest(
             targetContract,
-            targetSelector,
-            targetData,
+            targetCalldata,
             callbackContract
         );
-
-        console.logBytes32(requestHash);
 
         fulfiller.fulfillCrossChainRequest(
             ORACLE_CHAIN,
             address(oracle),
             nonce,
             targetContract,
-            targetSelector,
-            fakeData,
+            fakeTargetCalldata,
             callbackContract
         );
         (
@@ -265,9 +256,8 @@ contract TelepathyOracleTest is Test {
             abi.encodePacked(
                 nonce,
                 targetContract,
-                targetSelector,
                 callbackContract,
-                fakeData
+                fakeTargetCalldata
             )
         );
 

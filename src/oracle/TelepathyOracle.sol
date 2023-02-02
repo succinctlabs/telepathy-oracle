@@ -15,8 +15,7 @@ contract TelepathyOracle is ITelepathyHandler {
     event CrossChainRequestSent(
         uint256 indexed nonce,
         address targetContract,
-        bytes4 targetSelector,
-        bytes targetData,
+        bytes targetCalldata,
         address callbackContract
     );
 
@@ -43,8 +42,7 @@ contract TelepathyOracle is ITelepathyHandler {
 
     function requestCrossChain(
         address _targetContract,
-        bytes4 _targetSelector,
-        bytes calldata _targetData,
+        bytes calldata _targetCalldata,
         address _callbackContract
     ) external returns (uint256 nonce) {
         unchecked {
@@ -54,9 +52,8 @@ contract TelepathyOracle is ITelepathyHandler {
             abi.encodePacked(
                 nonce,
                 _targetContract,
-                _targetSelector,
                 _callbackContract,
-                _targetData
+                _targetCalldata
             )
         );
         requests[requestHash] = RequestStatus.PENDING;
@@ -64,8 +61,7 @@ contract TelepathyOracle is ITelepathyHandler {
         emit CrossChainRequestSent(
             nonce,
             _targetContract,
-            _targetSelector,
-            _targetData,
+            _targetCalldata,
             _callbackContract
         );
         return nonce;
