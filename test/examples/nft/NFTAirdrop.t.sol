@@ -47,11 +47,6 @@ contract NFTAirdropTest is Test {
             address(targetAmb),
             address(fulfiller)
         );
-        // helper = new TelepathyOracleTestHelper(
-        //     address(fulfiller),
-        //     ORACLE_CHAIN,
-        //     address(oracle)
-        // );
         nft = new ERC721Mock("Test NFT", "NFT");
         nftAirdrop = new SimpleNFTAirdrop{value: 10 ether}(
             address(nft),
