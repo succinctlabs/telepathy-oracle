@@ -27,7 +27,6 @@ contract NFTAirdropTest is Test {
     MockTelepathy targetAmb;
     TelepathyOracleFulfiller fulfiller;
     TelepathyOracle oracle;
-    // TelepathyOracleTestHelper helper;
     ERC721Mock nft;
     NFTAirdrop nftAirdrop;
 
