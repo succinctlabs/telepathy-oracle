@@ -25,9 +25,9 @@ contract MockReceiver is IOracleCallbackReceiver {
     uint256 public result;
 
     function handleOracleResponse(
-        uint256 _nonce,
+        uint256,
         bytes memory responseData,
-        bool responseSuccess
+        bool
     ) external override {
         result = abi.decode(responseData, (uint256));
     }
@@ -63,8 +63,8 @@ contract TelepathyOracleTest is Test {
             abi.encodePacked(
                 nonce,
                 targetContract,
-                callbackContract,
-                targetCalldata
+                targetCalldata,
+                callbackContract
             )
         );
     }
@@ -82,10 +82,10 @@ contract TelepathyOracleTest is Test {
     }
 
     function testSimple() public {
-        MockMainnetData MockMainnetData = new MockMainnetData();
+        MockMainnetData mockMainnetData = new MockMainnetData();
         MockReceiver receiver = new MockReceiver();
         assertEq(receiver.result(), 0);
-        address targetContract = address(MockMainnetData);
+        address targetContract = address(mockMainnetData);
         bytes memory targetCalldata = abi.encodeWithSelector(
             MockMainnetData.get.selector
         );
@@ -108,8 +108,8 @@ contract TelepathyOracleTest is Test {
             abi.encodePacked(
                 nonce,
                 targetContract,
-                callbackContract,
-                targetCalldata
+                targetCalldata,
+                callbackContract
             )
         );
         assertTrue(oracle.requests(requestHash) == RequestStatus.PENDING);
@@ -125,7 +125,7 @@ contract TelepathyOracleTest is Test {
 
         sourceAmb.executeNextMessage();
 
-        assertEq(receiver.result(), MockMainnetData.get());
+        assertEq(receiver.result(), mockMainnetData.get());
     }
 
     function testRevertNotFromAmb() public {
@@ -161,16 +161,16 @@ contract TelepathyOracleTest is Test {
     }
 
     function testRevertReplayResponse() public {
-        MockMainnetData MockMainnetData = new MockMainnetData();
+        MockMainnetData mockMainnetData = new MockMainnetData();
         MockReceiver receiver = new MockReceiver();
         assertEq(receiver.result(), 0);
-        address targetContract = address(MockMainnetData);
+        address targetContract = address(mockMainnetData);
         bytes memory targetCalldata = abi.encodeWithSelector(
             MockMainnetData.get.selector
         );
         address callbackContract = address(receiver);
 
-        (uint256 nonce, bytes32 requestHash) = makeRequest(
+        (, bytes32 requestHash) = makeRequest(
             targetContract,
             targetCalldata,
             callbackContract
@@ -214,10 +214,10 @@ contract TelepathyOracleTest is Test {
     }
 
     function testRevertIncorrectResponseData() public {
-        MockMainnetData MockMainnetData = new MockMainnetData();
+        MockMainnetData mockMainnetData = new MockMainnetData();
         MockReceiver receiver = new MockReceiver();
         assertEq(receiver.result(), 0);
-        address targetContract = address(MockMainnetData);
+        address targetContract = address(mockMainnetData);
         bytes memory targetCalldata = abi.encodeWithSelector(
             MockMainnetData.hashString.selector,
             "hello world"
@@ -229,7 +229,7 @@ contract TelepathyOracleTest is Test {
             "goodbye world"
         );
 
-        (uint256 nonce, bytes32 requestHash) = makeRequest(
+        (uint256 nonce, ) = makeRequest(
             targetContract,
             targetCalldata,
             callbackContract
@@ -256,8 +256,8 @@ contract TelepathyOracleTest is Test {
             abi.encodePacked(
                 nonce,
                 targetContract,
-                callbackContract,
-                fakeTargetCalldata
+                fakeTargetCalldata,
+                callbackContract
             )
         );
 

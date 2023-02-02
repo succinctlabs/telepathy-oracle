@@ -1,6 +1,5 @@
 pragma solidity ^0.8.14;
 
-import "forge-std/console.sol";
 import {ITelepathyHandler} from "telepathy/amb/interfaces/ITelepathy.sol";
 import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
 
@@ -24,10 +23,16 @@ contract TelepathyOracle is ITelepathyHandler {
     error NotTargetAmb(address srcAddress);
     error RequestNotPending(bytes32 requestHash);
 
+    /// @notice Maps request hashes to their status
+    /// @dev The hash of a request is keccak256(abi.encodePacked(nonce, targetContract, targetCalldata, callbackContract))
     mapping(bytes32 => RequestStatus) public requests;
+    /// @notice The next nonce to use when sending a cross-chain request
     uint256 public nextNonce = 1;
+    /// @notice The address of the target AMB contract
     address public targetAmb;
+    /// @notice The address of the fulfiller contract on the other chain
     address public fulfiller;
+    /// @notice The chain ID of the fulfiller contract
     uint16 public fulfillerChainId;
 
     constructor(
@@ -52,8 +57,8 @@ contract TelepathyOracle is ITelepathyHandler {
             abi.encodePacked(
                 nonce,
                 _targetContract,
-                _callbackContract,
-                _targetCalldata
+                _targetCalldata,
+                _callbackContract
             )
         );
         requests[requestHash] = RequestStatus.PENDING;
