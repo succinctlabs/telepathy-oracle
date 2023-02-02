@@ -176,7 +176,7 @@ contract TelepathyOracleTest is Test {
             ,
             ,
             bytes memory data
-        ) = sourceAmb.sentMessages(0);
+        ) = sourceAmb.sentMessages(1);
         vm.prank(address(targetAmb));
         oracle.handleTelepathy(sourceChainId, senderAddress, data);
 
@@ -236,7 +236,7 @@ contract TelepathyOracleTest is Test {
             ,
             ,
             bytes memory data
-        ) = sourceAmb.sentMessages(0);
+        ) = sourceAmb.sentMessages(1);
 
         bytes32 fakeRequestHash = keccak256(abi.encode(fakeRequestData));
 
@@ -248,5 +248,39 @@ contract TelepathyOracleTest is Test {
             )
         );
         oracle.handleTelepathy(sourceChainId, senderAddress, data);
+    }
+
+    function testNonContractTarget() public {
+        MockReceiver receiver = new MockReceiver();
+        assertEq(receiver.result(), 0);
+        address targetContract = address(0);
+        bytes memory targetCalldata = "";
+        address callbackContract = address(receiver);
+
+        (RequestData memory requestData, ) = makeRequest(
+            targetContract,
+            targetCalldata,
+            callbackContract
+        );
+
+        fulfiller.fulfillCrossChainRequest(
+            ORACLE_CHAIN,
+            address(oracle),
+            requestData
+        );
+        (
+            ,
+            uint16 sourceChainId,
+            address senderAddress,
+            ,
+            ,
+            bytes memory responseData
+        ) = sourceAmb.sentMessages(1);
+        (, , , , bool responseSuccess) = abi.decode(
+            responseData,
+            (uint256, bytes32, address, bytes, bool)
+        );
+
+        assertFalse(responseSuccess);
     }
 }
