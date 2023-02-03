@@ -91,7 +91,26 @@ contract ENSQueryExampleTest is Test {
             )
         );
         sourceAmb.executeNextMessage();
-        (bool success, address addr, uint96 timestamp) = query.addresses(node);
+        (bool success, , uint96 timestamp) = query.addresses(node);
+        assertFalse(success);
+        assertEq(timestamp, block.timestamp);
+    }
+
+    function testUnknownName() public {
+        bytes32 node = namehash("lksjaflsefjasldifjaisljfli");
+        query.sendQuery(node);
+        fulfiller.fulfillCrossChainRequest(
+            ORACLE_CHAIN,
+            address(oracle),
+            RequestData(
+                1,
+                address(ensUtil),
+                abi.encodeWithSelector(ENSUtil.resolve.selector, node),
+                address(query)
+            )
+        );
+        sourceAmb.executeNextMessage();
+        (bool success, , uint96 timestamp) = query.addresses(node);
         assertFalse(success);
         assertEq(timestamp, block.timestamp);
     }
