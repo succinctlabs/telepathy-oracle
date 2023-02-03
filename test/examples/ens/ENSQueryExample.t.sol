@@ -77,7 +77,7 @@ contract ENSQueryExampleTest is Test {
         assertEq(timestamp, block.timestamp);
     }
 
-    function testFailOffchainResolver() public {
+    function testOffchainResolver() public {
         bytes32 node = namehash("offchainexample");
         query.sendQuery(node);
         fulfiller.fulfillCrossChainRequest(

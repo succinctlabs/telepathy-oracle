@@ -2,7 +2,7 @@ pragma solidity ^0.8.14;
 
 import {IERC721} from "openzeppelin/token/ERC721/IERC721.sol";
 import {TelepathyOracle} from "src/oracle/TelepathyOracle.sol";
-import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
+import {OracleCallbackBase} from "src/oracle/OracleCallbackBase.sol";
 import {ENSUtil} from "src/examples/ens/ENSUtil.sol";
 
 struct Request {
@@ -18,9 +18,7 @@ struct ResolvedAddress {
 
 /// @title ENSQueryExample
 /// @notice Example contract that queries mainnet to resolve an ENS name on chain
-contract ENSQueryExample is IOracleCallbackReceiver {
-    error NotFromOracle(address srcAddress);
-
+contract ENSQueryExample is OracleCallbackBase {
     address ensUtil;
     TelepathyOracle oracle;
 
@@ -29,7 +27,7 @@ contract ENSQueryExample is IOracleCallbackReceiver {
     /// @notice Maps resolved ENS names to their addresses (could be outdated)
     mapping(bytes32 => ResolvedAddress) public addresses;
 
-    constructor(address _oracle, address _ensUtil) {
+    constructor(address _oracle, address _ensUtil) OracleCallbackBase(_oracle) {
         oracle = TelepathyOracle(_oracle);
         ensUtil = _ensUtil;
     }
@@ -48,10 +46,7 @@ contract ENSQueryExample is IOracleCallbackReceiver {
         uint256 _nonce,
         bytes memory _responseData,
         bool _responseSuccess
-    ) external override {
-        if (msg.sender != address(oracle)) {
-            revert NotFromOracle(msg.sender);
-        }
+    ) internal override {
         address resolved;
         if (_responseSuccess) {
             resolved = abi.decode(_responseData, (address));
