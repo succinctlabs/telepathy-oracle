@@ -20,9 +20,6 @@ contract ENSQueryExampleTest is Test {
     uint16 ORACLE_CHAIN = 137;
     uint16 FULFILLER_CHAIN = 1;
 
-    address USER = makeAddr("user");
-    address USER2 = makeAddr("user2");
-
     function setUp() public {
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 16550060);
         sourceAmb = new MockTelepathy(FULFILLER_CHAIN);
