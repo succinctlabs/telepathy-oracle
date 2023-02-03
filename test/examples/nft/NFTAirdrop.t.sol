@@ -7,6 +7,7 @@ import {MockTelepathy} from "telepathy/amb/mocks/MockAMB.sol";
 import {TelepathyOracle, RequestData} from "src/oracle/TelepathyOracle.sol";
 import {TelepathyOracleFulfiller} from "src/oracle/TelepathyOracleFulfiller.sol";
 import {ERC721Mock} from "openzeppelin/mocks/ERC721Mock.sol";
+import {OracleCallbackBase} from "src/oracle/OracleCallbackBase.sol";
 
 contract SimpleNFTAirdrop is NFTAirdrop {
     constructor(address _nft, address _oracle)
@@ -71,6 +72,7 @@ contract NFTAirdropTest is Test {
     /// @dev Gets AMB message and decodes the remote query data+success
     function getOracleResponse(uint256 telepathyNonce)
         internal
+        view
         returns (bytes memory responseData, bool responseSuccess)
     {
         (
@@ -115,7 +117,7 @@ contract NFTAirdropTest is Test {
             )
         );
         vm.prank(address(oracle));
-        nftAirdrop.handleOracleResponse(1, responseData, responseSuccess);
+        nftAirdrop.rawHandleOracleResponse(1, responseData, responseSuccess);
     }
 
     function testRevertQueryFailed() public {
@@ -132,7 +134,7 @@ contract NFTAirdropTest is Test {
             abi.encodeWithSelector(NFTAirdrop.OracleQueryFailed.selector)
         );
         vm.prank(address(oracle));
-        nftAirdrop.handleOracleResponse(1, responseData, responseSuccess);
+        nftAirdrop.rawHandleOracleResponse(1, responseData, responseSuccess);
     }
 
     function testRevertNotOracle() public {
@@ -147,11 +149,11 @@ contract NFTAirdropTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                NFTAirdrop.NotFromOracle.selector,
+                OracleCallbackBase.NotFromOracle.selector,
                 address(this)
             )
         );
-        nftAirdrop.handleOracleResponse(1, responseData, responseSuccess);
+        nftAirdrop.rawHandleOracleResponse(1, responseData, responseSuccess);
     }
 
     function testRevertAlreadyClaimed() public {
@@ -168,7 +170,7 @@ contract NFTAirdropTest is Test {
 
         // response1
         vm.prank(address(oracle));
-        nftAirdrop.handleOracleResponse(1, responseData, responseSuccess);
+        nftAirdrop.rawHandleOracleResponse(1, responseData, responseSuccess);
 
         // transfer
         vm.prank(USER);
@@ -206,13 +208,13 @@ contract NFTAirdropTest is Test {
 
         // reponse1
         vm.prank(address(oracle));
-        nftAirdrop.handleOracleResponse(1, responseData, responseSuccess);
+        nftAirdrop.rawHandleOracleResponse(1, responseData, responseSuccess);
 
         // response2
         vm.expectRevert(
             abi.encodeWithSelector(NFTAirdrop.AlreadyClaimed.selector, tokenId)
         );
         vm.prank(address(oracle));
-        nftAirdrop.handleOracleResponse(1, responseData2, responseSuccess2);
+        nftAirdrop.rawHandleOracleResponse(1, responseData2, responseSuccess2);
     }
 }

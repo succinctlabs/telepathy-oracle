@@ -2,17 +2,16 @@ pragma solidity ^0.8.14;
 
 import {IERC721} from "openzeppelin/token/ERC721/IERC721.sol";
 import {TelepathyOracle} from "src/oracle/TelepathyOracle.sol";
-import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
+import {OracleCallbackBase} from "src/oracle/OracleCallbackBase.sol";
 
 struct Claim {
     address sender;
     uint256 tokenId;
 }
 
-abstract contract NFTAirdrop is IOracleCallbackReceiver {
+abstract contract NFTAirdrop is OracleCallbackBase {
     event AirdropClaimed(address indexed sender, uint256 indexed tokenId);
 
-    error NotFromOracle(address srcAddress);
     error NotOwnerOfToken(address owner, uint256 tokenId);
     error AlreadyClaimed(uint256 tokenId);
     error OracleQueryFailed();
@@ -25,7 +24,9 @@ abstract contract NFTAirdrop is IOracleCallbackReceiver {
     /// @notice Maps token IDs to whether they have been claimed
     mapping(uint256 => bool) public claimed;
 
-    constructor(address _sourceNft, address _oracle) {
+    constructor(address _sourceNft, address _oracle)
+        OracleCallbackBase(_oracle)
+    {
         sourceNft = _sourceNft;
         oracle = TelepathyOracle(_oracle);
     }
@@ -46,10 +47,7 @@ abstract contract NFTAirdrop is IOracleCallbackReceiver {
         uint256 _nonce,
         bytes memory _responseData,
         bool _responseSuccess
-    ) external override {
-        if (msg.sender != address(oracle)) {
-            revert NotFromOracle(msg.sender);
-        }
+    ) internal override {
         if (!_responseSuccess) {
             revert OracleQueryFailed();
         }

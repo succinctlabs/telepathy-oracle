@@ -24,7 +24,7 @@ contract MockMainnetData {
 contract MockReceiver is IOracleCallbackReceiver {
     uint256 public result;
 
-    function handleOracleResponse(
+    function rawHandleOracleResponse(
         uint256,
         bytes memory responseData,
         bool

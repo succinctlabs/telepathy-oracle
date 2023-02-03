@@ -111,7 +111,7 @@ contract TelepathyOracle is ITelepathyHandler {
 
         callbackContract.call(
             abi.encodeWithSelector(
-                IOracleCallbackReceiver.handleOracleResponse.selector,
+                IOracleCallbackReceiver.rawHandleOracleResponse.selector,
                 nonce,
                 responseData,
                 responseSuccess
