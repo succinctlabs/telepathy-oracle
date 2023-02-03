@@ -2,6 +2,7 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
+gas_reports = ["TelepathyOracle","TelepathyOracleFulfiller","NFTAirdrop","ENSQueryExample"]
 
 [fmt]
 line_length = 100
@@ -11,15 +12,4 @@ func_attrs_with_params_multiline = true
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
 
 [rpc_endpoints]
-eth = "${RPC_1}"
-goerli = "${RPC_5}"
-polygon = "${RPC_137}"
-op = "${RPC_10}"
-arb = "${RPC_42161}"
-
-[etherscan]
-eth = { key = "${ETHERSCAN_API_KEY}" }
-goerli = { key = "${ETHERSCAN_API_KEY}" }
-polygon = { key = "${ETHERSCAN_137}" }
-op = { key = "${ETHERSCAN_10}" }
-arb = { key = "${ETHERSCAN_42161}" }
+eth = "${MAINNET_RPC_URL}"
