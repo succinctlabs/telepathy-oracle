@@ -1,6 +1,6 @@
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.16;
 
-import {ITelepathyHandler} from "telepathy/amb/interfaces/ITelepathy.sol";
+import {TelepathyHandler} from "telepathy-contracts/amb/interfaces/TelepathyHandler.sol";
 import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
 
 enum RequestStatus {
@@ -17,7 +17,7 @@ struct RequestData {
     address callbackContract;
 }
 
-contract TelepathyOracle is ITelepathyHandler {
+contract TelepathyOracle is TelepathyHandler {
     event CrossChainRequestSent(
         uint256 indexed nonce,
         address targetContract,
@@ -27,7 +27,6 @@ contract TelepathyOracle is ITelepathyHandler {
 
     error InvalidChainId(uint256 sourceChain);
     error NotFulfiller(address srcAddress);
-    error NotTargetAmb(address srcAddress);
     error RequestNotPending(bytes32 requestHash);
 
     /// @notice Maps request hashes to their status
@@ -35,20 +34,18 @@ contract TelepathyOracle is ITelepathyHandler {
     mapping(bytes32 => RequestStatus) public requests;
     /// @notice The next nonce to use when sending a cross-chain request
     uint256 public nextNonce = 1;
-    /// @notice The address of the target AMB contract
-    address public targetAmb;
+    /// @notice The address of the Telepathy Router contract
+    address public telepathyRouter;
     /// @notice The address of the fulfiller contract on the other chain
     address public fulfiller;
     /// @notice The chain ID of the fulfiller contract
-    uint16 public fulfillerChainId;
+    uint32 public fulfillerChainId;
 
-    constructor(
-        uint16 _fulfillerChainId,
-        address _targetAmb,
-        address _fulfiller
-    ) {
+    constructor(uint32 _fulfillerChainId, address _telepathyRouter, address _fulfiller)
+        TelepathyHandler(_telepathyRouter)
+    {
         fulfillerChainId = _fulfillerChainId;
-        targetAmb = _targetAmb;
+        telepathyRouter = _telepathyRouter;
         fulfiller = _fulfiller;
     }
 
@@ -60,34 +57,21 @@ contract TelepathyOracle is ITelepathyHandler {
         unchecked {
             nonce = nextNonce++;
         }
-        RequestData memory requestData = RequestData(
-            nonce,
-            _targetContract,
-            _targetCalldata,
-            _callbackContract
-        );
+        RequestData memory requestData =
+            RequestData(nonce, _targetContract, _targetCalldata, _callbackContract);
         bytes32 requestHash = keccak256(abi.encode(requestData));
         requests[requestHash] = RequestStatus.PENDING;
 
-        emit CrossChainRequestSent(
-            nonce,
-            _targetContract,
-            _targetCalldata,
-            _callbackContract
-        );
+        emit CrossChainRequestSent(nonce, _targetContract, _targetCalldata, _callbackContract);
         return nonce;
     }
 
-    function handleTelepathy(
-        uint16 _sourceChain,
-        address _senderAddress,
-        bytes memory _data
-    ) external override {
+    function handleTelepathyImpl(uint32 _sourceChain, address _senderAddress, bytes memory _data)
+        internal
+        override
+    {
         if (_sourceChain != fulfillerChainId) {
             revert InvalidChainId(_sourceChain);
-        }
-        if (msg.sender != targetAmb) {
-            revert NotTargetAmb(msg.sender);
         }
         if (_senderAddress != fulfiller) {
             revert NotFulfiller(_senderAddress);
@@ -105,9 +89,7 @@ contract TelepathyOracle is ITelepathyHandler {
             revert RequestNotPending(requestHash);
         }
 
-        requests[requestHash] = responseSuccess
-            ? RequestStatus.SUCCESS
-            : RequestStatus.FAILED;
+        requests[requestHash] = responseSuccess ? RequestStatus.SUCCESS : RequestStatus.FAILED;
 
         callbackContract.call(
             abi.encodeWithSelector(

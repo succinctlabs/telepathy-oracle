@@ -1,35 +1,29 @@
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.16;
 
-import {ITelepathyBroadcaster} from "telepathy/amb/interfaces/ITelepathy.sol";
+import {ITelepathyRouter} from "telepathy-contracts/amb/interfaces/ITelepathy.sol";
 import {RequestData} from "src/oracle/TelepathyOracle.sol";
 
 contract TelepathyOracleFulfiller {
-    ITelepathyBroadcaster telepathyBroadcaster;
+    ITelepathyRouter telepathyRouter;
 
-    constructor(address _telepathyBroadcaster) {
-        telepathyBroadcaster = ITelepathyBroadcaster(_telepathyBroadcaster);
+    constructor(address _telepathyRouter) {
+        telepathyRouter = ITelepathyRouter(_telepathyRouter);
     }
 
     function fulfillCrossChainRequest(
-        uint16 _oracleChain,
+        uint32 _oracleChain,
         address _oracleAddress,
         RequestData calldata _requestData
     ) external {
         bool success = false;
         bytes memory resultData;
         if (_requestData.targetContract.code.length != 0) {
-            (success, resultData) = _requestData.targetContract.call(
-                _requestData.targetCalldata
-            );
+            (success, resultData) = _requestData.targetContract.call(_requestData.targetCalldata);
         }
         bytes32 requestHash = keccak256(abi.encode(_requestData));
         bytes memory data = abi.encode(
-            _requestData.nonce,
-            requestHash,
-            _requestData.callbackContract,
-            resultData,
-            success
+            _requestData.nonce, requestHash, _requestData.callbackContract, resultData, success
         );
-        telepathyBroadcaster.sendViaLog(_oracleChain, _oracleAddress, data);
+        telepathyRouter.send(_oracleChain, _oracleAddress, data);
     }
 }

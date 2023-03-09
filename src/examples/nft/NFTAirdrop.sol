@@ -1,6 +1,6 @@
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.16;
 
-import {IERC721} from "openzeppelin/token/ERC721/IERC721.sol";
+import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
 import {TelepathyOracle} from "src/oracle/TelepathyOracle.sol";
 import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
 
@@ -42,11 +42,10 @@ abstract contract NFTAirdrop is IOracleCallbackReceiver {
         claimRequests[nonce] = Claim(msg.sender, _tokenId);
     }
 
-    function handleOracleResponse(
-        uint256 _nonce,
-        bytes memory _responseData,
-        bool _responseSuccess
-    ) external override {
+    function handleOracleResponse(uint256 _nonce, bytes memory _responseData, bool _responseSuccess)
+        external
+        override
+    {
         if (msg.sender != address(oracle)) {
             revert NotFromOracle(msg.sender);
         }

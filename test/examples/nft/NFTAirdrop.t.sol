@@ -1,49 +1,46 @@
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.16;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {NFTAirdrop} from "src/examples/nft/NFTAirdrop.sol";
-import {MockTelepathy} from "telepathy/amb/mocks/MockAMB.sol";
+import {MockTelepathy} from "telepathy-contracts/amb/mocks/MockTelepathy.sol";
 import {TelepathyOracle, RequestData} from "src/oracle/TelepathyOracle.sol";
 import {TelepathyOracleFulfiller} from "src/oracle/TelepathyOracleFulfiller.sol";
-import {ERC721Mock} from "openzeppelin/mocks/ERC721Mock.sol";
+import {ERC721Mock} from "openzeppelin-contracts/contracts/mocks/ERC721Mock.sol";
 
 contract SimpleNFTAirdrop is NFTAirdrop {
-    constructor(address _nft, address _oracle)
-        payable
-        NFTAirdrop(_nft, _oracle)
-    {
+    constructor(address _nft, address _oracle) payable NFTAirdrop(_nft, _oracle) {
         require(msg.value == 10 ether);
     }
 
     function _giveAirdrop(address _to, uint256 _tokenId) internal override {
-        (bool success, ) = payable(_to).call{value: 1 ether}("");
+        (bool success,) = payable(_to).call{value: 1 ether}("");
         require(success);
     }
 }
 
 contract NFTAirdropTest is Test {
-    MockTelepathy sourceAmb;
-    MockTelepathy targetAmb;
+    MockTelepathy telepathyRouterSrc;
+    MockTelepathy telepathyRouterDst;
     TelepathyOracleFulfiller fulfiller;
     TelepathyOracle oracle;
     ERC721Mock nft;
     NFTAirdrop nftAirdrop;
 
-    uint16 ORACLE_CHAIN = 137;
-    uint16 FULFILLER_CHAIN = 1;
+    uint32 ORACLE_CHAIN = 137;
+    uint32 FULFILLER_CHAIN = 1;
 
     address USER = makeAddr("user");
     address USER2 = makeAddr("user2");
 
     function setUp() public {
-        sourceAmb = new MockTelepathy(FULFILLER_CHAIN);
-        targetAmb = new MockTelepathy(ORACLE_CHAIN);
-        sourceAmb.addTelepathyReceiver(ORACLE_CHAIN, targetAmb);
-        fulfiller = new TelepathyOracleFulfiller(address(sourceAmb));
+        telepathyRouterSrc = new MockTelepathy(FULFILLER_CHAIN);
+        telepathyRouterDst = new MockTelepathy(ORACLE_CHAIN);
+        telepathyRouterSrc.addTelepathyReceiver(ORACLE_CHAIN, telepathyRouterDst);
+        fulfiller = new TelepathyOracleFulfiller(address(telepathyRouterSrc));
         oracle = new TelepathyOracle(
             FULFILLER_CHAIN,
-            address(targetAmb),
+            address(telepathyRouterDst),
             address(fulfiller)
         );
         nft = new ERC721Mock("Test NFT", "NFT");
@@ -68,24 +65,16 @@ contract NFTAirdropTest is Test {
         );
     }
 
-    /// @dev Gets AMB message and decodes the remote query data+success
-    function getOracleResponse(uint256 telepathyNonce)
+    /// @dev Gets Router message and decodes the remote query data+success
+    function getOracleResponse(uint64 telepathyNonce)
         internal
         returns (bytes memory responseData, bool responseSuccess)
     {
-        (
-            ,
-            uint16 sourceChainId,
-            address senderAddress,
-            ,
-            ,
-            bytes memory telepathyData
-        ) = sourceAmb.sentMessages(telepathyNonce);
+        (,, uint32 sourceChainId, address senderAddress,,, bytes memory telepathyData) =
+            telepathyRouterSrc.sentMessages(telepathyNonce);
 
-        (, , , responseData, responseSuccess) = abi.decode(
-            telepathyData,
-            (uint256, bytes32, address, bytes, bool)
-        );
+        (,,, responseData, responseSuccess) =
+            abi.decode(telepathyData, (uint256, bytes32, address, bytes, bool));
     }
 
     function testSimple() public {
@@ -93,7 +82,7 @@ contract NFTAirdropTest is Test {
         nft.mint(USER, tokenId);
 
         sendClaim(USER, tokenId);
-        sourceAmb.executeNextMessage();
+        telepathyRouterSrc.executeNextMessage();
         assertEq(USER.balance, 1 ether);
     }
 
@@ -103,17 +92,9 @@ contract NFTAirdropTest is Test {
 
         sendClaim(USER, tokenId);
 
-        (bytes memory responseData, bool responseSuccess) = getOracleResponse(
-            1
-        );
+        (bytes memory responseData, bool responseSuccess) = getOracleResponse(1);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                NFTAirdrop.NotOwnerOfToken.selector,
-                USER,
-                tokenId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(NFTAirdrop.NotOwnerOfToken.selector, USER, tokenId));
         vm.prank(address(oracle));
         nftAirdrop.handleOracleResponse(1, responseData, responseSuccess);
     }
@@ -124,13 +105,9 @@ contract NFTAirdropTest is Test {
 
         sendClaim(USER, tokenId);
 
-        (bytes memory responseData, bool responseSuccess) = getOracleResponse(
-            1
-        );
+        (bytes memory responseData, bool responseSuccess) = getOracleResponse(1);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(NFTAirdrop.OracleQueryFailed.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(NFTAirdrop.OracleQueryFailed.selector));
         vm.prank(address(oracle));
         nftAirdrop.handleOracleResponse(1, responseData, responseSuccess);
     }
@@ -141,16 +118,9 @@ contract NFTAirdropTest is Test {
 
         sendClaim(USER, tokenId);
 
-        (bytes memory responseData, bool responseSuccess) = getOracleResponse(
-            1
-        );
+        (bytes memory responseData, bool responseSuccess) = getOracleResponse(1);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                NFTAirdrop.NotFromOracle.selector,
-                address(this)
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(NFTAirdrop.NotFromOracle.selector, address(this)));
         nftAirdrop.handleOracleResponse(1, responseData, responseSuccess);
     }
 
@@ -162,9 +132,7 @@ contract NFTAirdropTest is Test {
         // claim1
         sendClaim(USER, tokenId);
 
-        (bytes memory responseData, bool responseSuccess) = getOracleResponse(
-            1
-        );
+        (bytes memory responseData, bool responseSuccess) = getOracleResponse(1);
 
         // response1
         vm.prank(address(oracle));
@@ -175,9 +143,7 @@ contract NFTAirdropTest is Test {
         nft.transferFrom(USER, USER2, tokenId);
 
         // claim2
-        vm.expectRevert(
-            abi.encodeWithSelector(NFTAirdrop.AlreadyClaimed.selector, tokenId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(NFTAirdrop.AlreadyClaimed.selector, tokenId));
         sendClaim(USER2, tokenId);
     }
 
@@ -196,22 +162,16 @@ contract NFTAirdropTest is Test {
         // claim2
         sendClaim(USER2, tokenId);
 
-        (bytes memory responseData, bool responseSuccess) = getOracleResponse(
-            1
-        );
+        (bytes memory responseData, bool responseSuccess) = getOracleResponse(1);
 
-        (bytes memory responseData2, bool responseSuccess2) = getOracleResponse(
-            2
-        );
+        (bytes memory responseData2, bool responseSuccess2) = getOracleResponse(2);
 
         // reponse1
         vm.prank(address(oracle));
         nftAirdrop.handleOracleResponse(1, responseData, responseSuccess);
 
         // response2
-        vm.expectRevert(
-            abi.encodeWithSelector(NFTAirdrop.AlreadyClaimed.selector, tokenId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(NFTAirdrop.AlreadyClaimed.selector, tokenId));
         vm.prank(address(oracle));
         nftAirdrop.handleOracleResponse(1, responseData2, responseSuccess2);
     }
