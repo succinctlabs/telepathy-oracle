@@ -34,18 +34,16 @@ contract TelepathyOracle is TelepathyHandler {
     mapping(bytes32 => RequestStatus) public requests;
     /// @notice The next nonce to use when sending a cross-chain request
     uint256 public nextNonce = 1;
-    /// @notice The address of the target AMB contract
+    /// @notice The address of the Telepathy Router contract
     address public telepathyRouter;
     /// @notice The address of the fulfiller contract on the other chain
     address public fulfiller;
     /// @notice The chain ID of the fulfiller contract
     uint32 public fulfillerChainId;
 
-    constructor(
-        uint32 _fulfillerChainId,
-        address _telepathyRouter,
-        address _fulfiller
-    ) TelepathyHandler(_telepathyRouter) {
+    constructor(uint32 _fulfillerChainId, address _telepathyRouter, address _fulfiller)
+        TelepathyHandler(_telepathyRouter)
+    {
         fulfillerChainId = _fulfillerChainId;
         telepathyRouter = _telepathyRouter;
         fulfiller = _fulfiller;
@@ -59,29 +57,19 @@ contract TelepathyOracle is TelepathyHandler {
         unchecked {
             nonce = nextNonce++;
         }
-        RequestData memory requestData = RequestData(
-            nonce,
-            _targetContract,
-            _targetCalldata,
-            _callbackContract
-        );
+        RequestData memory requestData =
+            RequestData(nonce, _targetContract, _targetCalldata, _callbackContract);
         bytes32 requestHash = keccak256(abi.encode(requestData));
         requests[requestHash] = RequestStatus.PENDING;
 
-        emit CrossChainRequestSent(
-            nonce,
-            _targetContract,
-            _targetCalldata,
-            _callbackContract
-        );
+        emit CrossChainRequestSent(nonce, _targetContract, _targetCalldata, _callbackContract);
         return nonce;
     }
 
-    function handleTelepathyImpl(
-        uint32 _sourceChain,
-        address _senderAddress,
-        bytes memory _data
-    ) internal override {
+    function handleTelepathyImpl(uint32 _sourceChain, address _senderAddress, bytes memory _data)
+        internal
+        override
+    {
         if (_sourceChain != fulfillerChainId) {
             revert InvalidChainId(_sourceChain);
         }
@@ -101,9 +89,7 @@ contract TelepathyOracle is TelepathyHandler {
             revert RequestNotPending(requestHash);
         }
 
-        requests[requestHash] = responseSuccess
-            ? RequestStatus.SUCCESS
-            : RequestStatus.FAILED;
+        requests[requestHash] = responseSuccess ? RequestStatus.SUCCESS : RequestStatus.FAILED;
 
         callbackContract.call(
             abi.encodeWithSelector(

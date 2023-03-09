@@ -25,11 +25,7 @@ contract MockMainnetData {
 contract MockReceiver is IOracleCallbackReceiver {
     uint256 public result;
 
-    function handleOracleResponse(
-        uint256,
-        bytes memory responseData,
-        bool
-    ) external override {
+    function handleOracleResponse(uint256, bytes memory responseData, bool) external override {
         result = abi.decode(responseData, (uint256));
     }
 }
@@ -42,8 +38,8 @@ contract TelepathyOracleTest is Test {
         address callbackContract
     );
 
-    MockTelepathy sourceAmb;
-    MockTelepathy telepathyRouter;
+    MockTelepathy telepathyRouterSrc;
+    MockTelepathy telepathyRouterDst;
     TelepathyOracleFulfiller fulfiller;
     TelepathyOracle oracle;
 
@@ -55,28 +51,19 @@ contract TelepathyOracleTest is Test {
         bytes memory targetCalldata,
         address callbackContract
     ) internal returns (RequestData memory requestData, bytes32 requestHash) {
-        uint256 nonce = oracle.requestCrossChain(
-            targetContract,
-            targetCalldata,
-            callbackContract
-        );
-        requestData = RequestData(
-            nonce,
-            targetContract,
-            targetCalldata,
-            callbackContract
-        );
+        uint256 nonce = oracle.requestCrossChain(targetContract, targetCalldata, callbackContract);
+        requestData = RequestData(nonce, targetContract, targetCalldata, callbackContract);
         requestHash = keccak256(abi.encode(requestData));
     }
 
     function setUp() public {
-        sourceAmb = new MockTelepathy(FULFILLER_CHAIN);
-        telepathyRouter = new MockTelepathy(ORACLE_CHAIN);
-        sourceAmb.addTelepathyReceiver(ORACLE_CHAIN, telepathyRouter);
-        fulfiller = new TelepathyOracleFulfiller(address(sourceAmb));
+        telepathyRouterSrc = new MockTelepathy(FULFILLER_CHAIN);
+        telepathyRouterDst = new MockTelepathy(ORACLE_CHAIN);
+        telepathyRouterSrc.addTelepathyReceiver(ORACLE_CHAIN, telepathyRouterDst);
+        fulfiller = new TelepathyOracleFulfiller(address(telepathyRouterSrc));
         oracle = new TelepathyOracle{salt: 0}(
             FULFILLER_CHAIN,
-            address(telepathyRouter),
+            address(telepathyRouterDst),
             address(fulfiller)
         );
     }
@@ -86,65 +73,42 @@ contract TelepathyOracleTest is Test {
         MockReceiver receiver = new MockReceiver();
         assertEq(receiver.result(), 0);
         address targetContract = address(mockMainnetData);
-        bytes memory targetCalldata = abi.encodeWithSelector(
-            MockMainnetData.get.selector
-        );
+        bytes memory targetCalldata = abi.encodeWithSelector(MockMainnetData.get.selector);
         address callbackContract = address(receiver);
 
         vm.expectEmit(true, true, true, false);
-        emit CrossChainRequestSent(
-            1,
-            targetContract,
-            targetCalldata,
-            callbackContract
-        );
-        (RequestData memory requestData, bytes32 requestHash) = makeRequest(
-            targetContract,
-            targetCalldata,
-            callbackContract
-        );
+        emit CrossChainRequestSent(1, targetContract, targetCalldata, callbackContract);
+        (RequestData memory requestData, bytes32 requestHash) =
+            makeRequest(targetContract, targetCalldata, callbackContract);
         assertEq(requestData.nonce, 1);
         assertTrue(oracle.requests(requestHash) == RequestStatus.PENDING);
 
-        fulfiller.fulfillCrossChainRequest(
-            ORACLE_CHAIN,
-            address(oracle),
-            requestData
-        );
+        fulfiller.fulfillCrossChainRequest(ORACLE_CHAIN, address(oracle), requestData);
 
-        sourceAmb.executeNextMessage();
+        telepathyRouterSrc.executeNextMessage();
 
         assertEq(receiver.result(), mockMainnetData.get());
     }
 
-    function testRevertNotFromAmb() public {
+    function testRevertNotFromRouter() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                TelepathyHandler.NotFromTelepathyReceiever.selector,
-                address(this)
+                TelepathyHandler.NotFromTelepathyReceiever.selector, address(this)
             )
         );
         oracle.handleTelepathy(FULFILLER_CHAIN, address(fulfiller), "");
     }
 
     function testRevertWrongChainId() public {
-        vm.prank(address(telepathyRouter));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                TelepathyOracle.InvalidChainId.selector,
-                12345
-            )
-        );
+        vm.prank(address(telepathyRouterDst));
+        vm.expectRevert(abi.encodeWithSelector(TelepathyOracle.InvalidChainId.selector, 12345));
         oracle.handleTelepathy(12345, address(fulfiller), "");
     }
 
     function testRevertNotFromFulfiller() public {
-        vm.prank(address(telepathyRouter));
+        vm.prank(address(telepathyRouterDst));
         vm.expectRevert(
-            abi.encodeWithSelector(
-                TelepathyOracle.NotFulfiller.selector,
-                address(this)
-            )
+            abi.encodeWithSelector(TelepathyOracle.NotFulfiller.selector, address(this))
         );
         oracle.handleTelepathy(FULFILLER_CHAIN, address(this), "");
     }
@@ -154,45 +118,22 @@ contract TelepathyOracleTest is Test {
         MockReceiver receiver = new MockReceiver();
         assertEq(receiver.result(), 0);
         address targetContract = address(mockMainnetData);
-        bytes memory targetCalldata = abi.encodeWithSelector(
-            MockMainnetData.get.selector
-        );
+        bytes memory targetCalldata = abi.encodeWithSelector(MockMainnetData.get.selector);
         address callbackContract = address(receiver);
 
-        (RequestData memory requestData, bytes32 requestHash) = makeRequest(
-            targetContract,
-            targetCalldata,
-            callbackContract
-        );
+        (RequestData memory requestData, bytes32 requestHash) =
+            makeRequest(targetContract, targetCalldata, callbackContract);
 
-        fulfiller.fulfillCrossChainRequest(
-            ORACLE_CHAIN,
-            address(oracle),
-            requestData
-        );
-        (
-            ,
-            ,
-            uint32 sourceChainId,
-            address senderAddress,
-            ,
-            ,
-            bytes memory data
-        ) = sourceAmb.sentMessages(1);
-        vm.prank(address(telepathyRouter));
+        fulfiller.fulfillCrossChainRequest(ORACLE_CHAIN, address(oracle), requestData);
+        (,, uint32 sourceChainId, address senderAddress,,, bytes memory data) =
+            telepathyRouterSrc.sentMessages(1);
+        vm.prank(address(telepathyRouterDst));
         oracle.handleTelepathy(sourceChainId, senderAddress, data);
 
-        fulfiller.fulfillCrossChainRequest(
-            ORACLE_CHAIN,
-            address(oracle),
-            requestData
-        );
-        vm.prank(address(telepathyRouter));
+        fulfiller.fulfillCrossChainRequest(ORACLE_CHAIN, address(oracle), requestData);
+        vm.prank(address(telepathyRouterDst));
         vm.expectRevert(
-            abi.encodeWithSelector(
-                TelepathyOracle.RequestNotPending.selector,
-                requestHash
-            )
+            abi.encodeWithSelector(TelepathyOracle.RequestNotPending.selector, requestHash)
         );
         oracle.handleTelepathy(sourceChainId, senderAddress, data);
     }
@@ -202,22 +143,15 @@ contract TelepathyOracleTest is Test {
         MockReceiver receiver = new MockReceiver();
         assertEq(receiver.result(), 0);
         address targetContract = address(mockMainnetData);
-        bytes memory targetCalldata = abi.encodeWithSelector(
-            MockMainnetData.hashString.selector,
-            "hello world"
-        );
+        bytes memory targetCalldata =
+            abi.encodeWithSelector(MockMainnetData.hashString.selector, "hello world");
         address callbackContract = address(receiver);
 
-        bytes memory fakeTargetCalldata = abi.encodeWithSelector(
-            MockMainnetData.hashString.selector,
-            "goodbye world"
-        );
+        bytes memory fakeTargetCalldata =
+            abi.encodeWithSelector(MockMainnetData.hashString.selector, "goodbye world");
 
-        (RequestData memory realRequestData, ) = makeRequest(
-            targetContract,
-            targetCalldata,
-            callbackContract
-        );
+        (RequestData memory realRequestData,) =
+            makeRequest(targetContract, targetCalldata, callbackContract);
 
         RequestData memory fakeRequestData = RequestData(
             realRequestData.nonce,
@@ -226,29 +160,15 @@ contract TelepathyOracleTest is Test {
             realRequestData.callbackContract
         );
 
-        fulfiller.fulfillCrossChainRequest(
-            ORACLE_CHAIN,
-            address(oracle),
-            fakeRequestData
-        );
-        (
-            ,
-            ,
-            uint32 sourceChainId,
-            address senderAddress,
-            ,
-            ,
-            bytes memory data
-        ) = sourceAmb.sentMessages(1);
+        fulfiller.fulfillCrossChainRequest(ORACLE_CHAIN, address(oracle), fakeRequestData);
+        (,, uint32 sourceChainId, address senderAddress,,, bytes memory data) =
+            telepathyRouterSrc.sentMessages(1);
 
         bytes32 fakeRequestHash = keccak256(abi.encode(fakeRequestData));
 
-        vm.prank(address(telepathyRouter));
+        vm.prank(address(telepathyRouterDst));
         vm.expectRevert(
-            abi.encodeWithSelector(
-                TelepathyOracle.RequestNotPending.selector,
-                fakeRequestHash
-            )
+            abi.encodeWithSelector(TelepathyOracle.RequestNotPending.selector, fakeRequestHash)
         );
         oracle.handleTelepathy(sourceChainId, senderAddress, data);
     }
@@ -260,30 +180,14 @@ contract TelepathyOracleTest is Test {
         bytes memory targetCalldata = "";
         address callbackContract = address(receiver);
 
-        (RequestData memory requestData, ) = makeRequest(
-            targetContract,
-            targetCalldata,
-            callbackContract
-        );
+        (RequestData memory requestData,) =
+            makeRequest(targetContract, targetCalldata, callbackContract);
 
-        fulfiller.fulfillCrossChainRequest(
-            ORACLE_CHAIN,
-            address(oracle),
-            requestData
-        );
-        (
-            ,
-            ,
-            uint32 sourceChainId,
-            address senderAddress,
-            ,
-            ,
-            bytes memory responseData
-        ) = sourceAmb.sentMessages(1);
-        (, , , , bool responseSuccess) = abi.decode(
-            responseData,
-            (uint256, bytes32, address, bytes, bool)
-        );
+        fulfiller.fulfillCrossChainRequest(ORACLE_CHAIN, address(oracle), requestData);
+        (,, uint32 sourceChainId, address senderAddress,,, bytes memory responseData) =
+            telepathyRouterSrc.sentMessages(1);
+        (,,,, bool responseSuccess) =
+            abi.decode(responseData, (uint256, bytes32, address, bytes, bool));
 
         assertFalse(responseSuccess);
     }

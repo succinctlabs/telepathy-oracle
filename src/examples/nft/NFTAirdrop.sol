@@ -42,11 +42,10 @@ abstract contract NFTAirdrop is IOracleCallbackReceiver {
         claimRequests[nonce] = Claim(msg.sender, _tokenId);
     }
 
-    function handleOracleResponse(
-        uint256 _nonce,
-        bytes memory _responseData,
-        bool _responseSuccess
-    ) external override {
+    function handleOracleResponse(uint256 _nonce, bytes memory _responseData, bool _responseSuccess)
+        external
+        override
+    {
         if (msg.sender != address(oracle)) {
             revert NotFromOracle(msg.sender);
         }

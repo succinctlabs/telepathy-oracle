@@ -1,9 +1,6 @@
 pragma solidity ^0.8.0;
 
 interface IOracleCallbackReceiver {
-    function handleOracleResponse(
-        uint256 nonce,
-        bytes memory responseData,
-        bool responseSuccess
-    ) external;
+    function handleOracleResponse(uint256 nonce, bytes memory responseData, bool responseSuccess)
+        external;
 }
