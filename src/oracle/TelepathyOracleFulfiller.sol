@@ -1,4 +1,4 @@
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.16;
 
 import {ITelepathyRouter} from "telepathy-contracts/amb/interfaces/ITelepathy.sol";
 import {RequestData} from "src/oracle/TelepathyOracle.sol";
@@ -11,7 +11,7 @@ contract TelepathyOracleFulfiller {
     }
 
     function fulfillCrossChainRequest(
-        uint16 _oracleChain,
+        uint32 _oracleChain,
         address _oracleAddress,
         RequestData calldata _requestData
     ) external {
@@ -30,6 +30,6 @@ contract TelepathyOracleFulfiller {
             resultData,
             success
         );
-        telepathyBroadcaster.sendViaLog(_oracleChain, _oracleAddress, data);
+        telepathyRouter.send(_oracleChain, _oracleAddress, data);
     }
 }

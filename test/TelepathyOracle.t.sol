@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.16;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {Message} from "telepathy-contracts/amb/interfaces/ITelepathy.sol";
 import {MockTelepathy} from "telepathy-contracts/amb/mocks/MockTelepathy.sol";
 import {TelepathyOracle, RequestStatus, RequestData} from "src/oracle/TelepathyOracle.sol";
+import {TelepathyHandler} from "telepathy-contracts/amb/interfaces/TelepathyHandler.sol";
 import {TelepathyOracleFulfiller} from "src/oracle/TelepathyOracleFulfiller.sol";
 import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
 
@@ -46,8 +47,8 @@ contract TelepathyOracleTest is Test {
     TelepathyOracleFulfiller fulfiller;
     TelepathyOracle oracle;
 
-    uint16 ORACLE_CHAIN = 137;
-    uint16 FULFILLER_CHAIN = 1;
+    uint32 ORACLE_CHAIN = 137;
+    uint32 FULFILLER_CHAIN = 1;
 
     function makeRequest(
         address targetContract,
@@ -119,7 +120,7 @@ contract TelepathyOracleTest is Test {
     function testRevertNotFromAmb() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                TelepathyOracle.NotTargetAmb.selector,
+                TelepathyHandler.NotFromTelepathyReceiever.selector,
                 address(this)
             )
         );
@@ -171,7 +172,8 @@ contract TelepathyOracleTest is Test {
         );
         (
             ,
-            uint16 sourceChainId,
+            ,
+            uint32 sourceChainId,
             address senderAddress,
             ,
             ,
@@ -231,7 +233,8 @@ contract TelepathyOracleTest is Test {
         );
         (
             ,
-            uint16 sourceChainId,
+            ,
+            uint32 sourceChainId,
             address senderAddress,
             ,
             ,
@@ -270,7 +273,8 @@ contract TelepathyOracleTest is Test {
         );
         (
             ,
-            uint16 sourceChainId,
+            ,
+            uint32 sourceChainId,
             address senderAddress,
             ,
             ,

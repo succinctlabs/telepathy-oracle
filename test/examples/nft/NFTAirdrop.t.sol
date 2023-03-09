@@ -1,4 +1,4 @@
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.16;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
@@ -30,8 +30,8 @@ contract NFTAirdropTest is Test {
     ERC721Mock nft;
     NFTAirdrop nftAirdrop;
 
-    uint16 ORACLE_CHAIN = 137;
-    uint16 FULFILLER_CHAIN = 1;
+    uint32 ORACLE_CHAIN = 137;
+    uint32 FULFILLER_CHAIN = 1;
 
     address USER = makeAddr("user");
     address USER2 = makeAddr("user2");
@@ -69,13 +69,14 @@ contract NFTAirdropTest is Test {
     }
 
     /// @dev Gets AMB message and decodes the remote query data+success
-    function getOracleResponse(uint256 telepathyNonce)
+    function getOracleResponse(uint64 telepathyNonce)
         internal
         returns (bytes memory responseData, bool responseSuccess)
     {
         (
             ,
-            uint16 sourceChainId,
+            ,
+            uint32 sourceChainId,
             address senderAddress,
             ,
             ,

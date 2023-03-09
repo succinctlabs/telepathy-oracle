@@ -1,6 +1,6 @@
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.16;
 
-import {ITelepathyHandler} from "telepathy-contracts/amb/interfaces/ITelepathy.sol";
+import {TelepathyHandler} from "telepathy-contracts/amb/interfaces/TelepathyHandler.sol";
 import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
 
 enum RequestStatus {
@@ -17,7 +17,7 @@ struct RequestData {
     address callbackContract;
 }
 
-contract TelepathyOracle is ITelepathyHandler {
+contract TelepathyOracle is TelepathyHandler {
     event CrossChainRequestSent(
         uint256 indexed nonce,
         address targetContract,
@@ -40,13 +40,13 @@ contract TelepathyOracle is ITelepathyHandler {
     /// @notice The address of the fulfiller contract on the other chain
     address public fulfiller;
     /// @notice The chain ID of the fulfiller contract
-    uint16 public fulfillerChainId;
+    uint32 public fulfillerChainId;
 
     constructor(
-        uint16 _fulfillerChainId,
+        uint32 _fulfillerChainId,
         address _targetAmb,
         address _fulfiller
-    ) {
+    ) TelepathyHandler(_targetAmb) {
         fulfillerChainId = _fulfillerChainId;
         targetAmb = _targetAmb;
         fulfiller = _fulfiller;
@@ -78,16 +78,13 @@ contract TelepathyOracle is ITelepathyHandler {
         return nonce;
     }
 
-    function handleTelepathy(
-        uint16 _sourceChain,
+    function handleTelepathyImpl(
+        uint32 _sourceChain,
         address _senderAddress,
         bytes memory _data
-    ) external override {
+    ) internal override {
         if (_sourceChain != fulfillerChainId) {
             revert InvalidChainId(_sourceChain);
-        }
-        if (msg.sender != targetAmb) {
-            revert NotTargetAmb(msg.sender);
         }
         if (_senderAddress != fulfiller) {
             revert NotFulfiller(_senderAddress);
@@ -109,7 +106,7 @@ contract TelepathyOracle is ITelepathyHandler {
             ? RequestStatus.SUCCESS
             : RequestStatus.FAILED;
 
-        callbackContract.call(
+        (bool success, ) = callbackContract.call(
             abi.encodeWithSelector(
                 IOracleCallbackReceiver.handleOracleResponse.selector,
                 nonce,
@@ -117,5 +114,6 @@ contract TelepathyOracle is ITelepathyHandler {
                 responseSuccess
             )
         );
+        require(success);
     }
 }
