@@ -27,7 +27,6 @@ contract TelepathyOracle is TelepathyHandler {
 
     error InvalidChainId(uint256 sourceChain);
     error NotFulfiller(address srcAddress);
-    error NotTargetAmb(address srcAddress);
     error RequestNotPending(bytes32 requestHash);
 
     /// @notice Maps request hashes to their status
@@ -36,7 +35,7 @@ contract TelepathyOracle is TelepathyHandler {
     /// @notice The next nonce to use when sending a cross-chain request
     uint256 public nextNonce = 1;
     /// @notice The address of the target AMB contract
-    address public targetAmb;
+    address public telepathyRouter;
     /// @notice The address of the fulfiller contract on the other chain
     address public fulfiller;
     /// @notice The chain ID of the fulfiller contract
@@ -44,11 +43,11 @@ contract TelepathyOracle is TelepathyHandler {
 
     constructor(
         uint32 _fulfillerChainId,
-        address _targetAmb,
+        address _telepathyRouter,
         address _fulfiller
-    ) TelepathyHandler(_targetAmb) {
+    ) TelepathyHandler(_telepathyRouter) {
         fulfillerChainId = _fulfillerChainId;
-        targetAmb = _targetAmb;
+        telepathyRouter = _telepathyRouter;
         fulfiller = _fulfiller;
     }
 
@@ -106,7 +105,7 @@ contract TelepathyOracle is TelepathyHandler {
             ? RequestStatus.SUCCESS
             : RequestStatus.FAILED;
 
-        (bool success, ) = callbackContract.call(
+        callbackContract.call(
             abi.encodeWithSelector(
                 IOracleCallbackReceiver.handleOracleResponse.selector,
                 nonce,
@@ -114,6 +113,5 @@ contract TelepathyOracle is TelepathyHandler {
                 responseSuccess
             )
         );
-        require(success);
     }
 }

@@ -43,7 +43,7 @@ contract TelepathyOracleTest is Test {
     );
 
     MockTelepathy sourceAmb;
-    MockTelepathy targetAmb;
+    MockTelepathy telepathyRouter;
     TelepathyOracleFulfiller fulfiller;
     TelepathyOracle oracle;
 
@@ -71,12 +71,12 @@ contract TelepathyOracleTest is Test {
 
     function setUp() public {
         sourceAmb = new MockTelepathy(FULFILLER_CHAIN);
-        targetAmb = new MockTelepathy(ORACLE_CHAIN);
-        sourceAmb.addTelepathyReceiver(ORACLE_CHAIN, targetAmb);
+        telepathyRouter = new MockTelepathy(ORACLE_CHAIN);
+        sourceAmb.addTelepathyReceiver(ORACLE_CHAIN, telepathyRouter);
         fulfiller = new TelepathyOracleFulfiller(address(sourceAmb));
         oracle = new TelepathyOracle{salt: 0}(
             FULFILLER_CHAIN,
-            address(targetAmb),
+            address(telepathyRouter),
             address(fulfiller)
         );
     }
@@ -128,7 +128,7 @@ contract TelepathyOracleTest is Test {
     }
 
     function testRevertWrongChainId() public {
-        vm.prank(address(targetAmb));
+        vm.prank(address(telepathyRouter));
         vm.expectRevert(
             abi.encodeWithSelector(
                 TelepathyOracle.InvalidChainId.selector,
@@ -139,7 +139,7 @@ contract TelepathyOracleTest is Test {
     }
 
     function testRevertNotFromFulfiller() public {
-        vm.prank(address(targetAmb));
+        vm.prank(address(telepathyRouter));
         vm.expectRevert(
             abi.encodeWithSelector(
                 TelepathyOracle.NotFulfiller.selector,
@@ -179,7 +179,7 @@ contract TelepathyOracleTest is Test {
             ,
             bytes memory data
         ) = sourceAmb.sentMessages(1);
-        vm.prank(address(targetAmb));
+        vm.prank(address(telepathyRouter));
         oracle.handleTelepathy(sourceChainId, senderAddress, data);
 
         fulfiller.fulfillCrossChainRequest(
@@ -187,7 +187,7 @@ contract TelepathyOracleTest is Test {
             address(oracle),
             requestData
         );
-        vm.prank(address(targetAmb));
+        vm.prank(address(telepathyRouter));
         vm.expectRevert(
             abi.encodeWithSelector(
                 TelepathyOracle.RequestNotPending.selector,
@@ -243,7 +243,7 @@ contract TelepathyOracleTest is Test {
 
         bytes32 fakeRequestHash = keccak256(abi.encode(fakeRequestData));
 
-        vm.prank(address(targetAmb));
+        vm.prank(address(telepathyRouter));
         vm.expectRevert(
             abi.encodeWithSelector(
                 TelepathyOracle.RequestNotPending.selector,

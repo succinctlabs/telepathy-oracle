@@ -24,7 +24,7 @@ contract SimpleNFTAirdrop is NFTAirdrop {
 
 contract NFTAirdropTest is Test {
     MockTelepathy sourceAmb;
-    MockTelepathy targetAmb;
+    MockTelepathy telepathyRouter;
     TelepathyOracleFulfiller fulfiller;
     TelepathyOracle oracle;
     ERC721Mock nft;
@@ -38,12 +38,12 @@ contract NFTAirdropTest is Test {
 
     function setUp() public {
         sourceAmb = new MockTelepathy(FULFILLER_CHAIN);
-        targetAmb = new MockTelepathy(ORACLE_CHAIN);
-        sourceAmb.addTelepathyReceiver(ORACLE_CHAIN, targetAmb);
+        telepathyRouter = new MockTelepathy(ORACLE_CHAIN);
+        sourceAmb.addTelepathyReceiver(ORACLE_CHAIN, telepathyRouter);
         fulfiller = new TelepathyOracleFulfiller(address(sourceAmb));
         oracle = new TelepathyOracle(
             FULFILLER_CHAIN,
-            address(targetAmb),
+            address(telepathyRouter),
             address(fulfiller)
         );
         nft = new ERC721Mock("Test NFT", "NFT");
