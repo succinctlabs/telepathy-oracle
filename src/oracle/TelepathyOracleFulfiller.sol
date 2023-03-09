@@ -1,13 +1,13 @@
 pragma solidity ^0.8.14;
 
-import {ITelepathyBroadcaster} from "telepathy/amb/interfaces/ITelepathy.sol";
+import {ITelepathyRouter} from "telepathy-contracts/amb/interfaces/ITelepathy.sol";
 import {RequestData} from "src/oracle/TelepathyOracle.sol";
 
 contract TelepathyOracleFulfiller {
-    ITelepathyBroadcaster telepathyBroadcaster;
+    ITelepathyRouter telepathyRouter;
 
-    constructor(address _telepathyBroadcaster) {
-        telepathyBroadcaster = ITelepathyBroadcaster(_telepathyBroadcaster);
+    constructor(address _telepathyRouter) {
+        telepathyRouter = ITelepathyRouter(_telepathyRouter);
     }
 
     function fulfillCrossChainRequest(

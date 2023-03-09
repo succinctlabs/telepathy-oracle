@@ -3,10 +3,10 @@ pragma solidity ^0.8.14;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {NFTAirdrop} from "src/examples/nft/NFTAirdrop.sol";
-import {MockTelepathy} from "telepathy/amb/mocks/MockAMB.sol";
+import {MockTelepathy} from "telepathy-contracts/amb/mocks/MockTelepathy.sol";
 import {TelepathyOracle, RequestData} from "src/oracle/TelepathyOracle.sol";
 import {TelepathyOracleFulfiller} from "src/oracle/TelepathyOracleFulfiller.sol";
-import {ERC721Mock} from "openzeppelin/mocks/ERC721Mock.sol";
+import {ERC721Mock} from "openzeppelin-contracts/contracts/mocks/ERC721Mock.sol";
 
 contract SimpleNFTAirdrop is NFTAirdrop {
     constructor(address _nft, address _oracle)

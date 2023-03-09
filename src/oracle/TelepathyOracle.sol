@@ -1,6 +1,6 @@
 pragma solidity ^0.8.14;
 
-import {ITelepathyHandler} from "telepathy/amb/interfaces/ITelepathy.sol";
+import {ITelepathyHandler} from "telepathy-contracts/amb/interfaces/ITelepathy.sol";
 import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
 
 enum RequestStatus {

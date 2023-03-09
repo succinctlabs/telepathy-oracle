@@ -1,5 +1,9 @@
-Solidity-RLP/=lib/telepathy/contracts/lib/Solidity-RLP/contracts/
-curve-merkle-oracle/=lib/telepathy/contracts/lib/curve-merkle-oracle/contracts/
-telepathy/=lib/telepathy-contracts/src/
+ds-test/=lib/forge-std/lib/ds-test/src/
+erc4626-tests/=lib/telepathy-contracts/lib/openzeppelin-contracts/lib/erc4626-tests/
 forge-std/=lib/forge-std/src/
-openzeppelin/=lib/openzeppelin-contracts/contracts/
+openzeppelin-contracts-upgradeable/=lib/telepathy-contracts/lib/openzeppelin-contracts-upgradeable/contracts
+openzeppelin-contracts/=lib/telepathy-contracts/lib/openzeppelin-contracts/
+optimism-bedrock-contracts/=lib/telepathy-contracts/lib/optimism-bedrock-contracts/
+telepathy-contracts/=lib/telepathy-contracts/src/
+v3-core/=lib/telepathy-contracts/lib/v3-core/
+ens-contracts/=lib/ens-contracts/contracts/

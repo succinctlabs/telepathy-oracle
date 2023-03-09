@@ -3,8 +3,8 @@ pragma solidity ^0.8.14;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
-import {Message} from "telepathy/amb/interfaces/ITelepathy.sol";
-import {MockTelepathy} from "telepathy/amb/mocks/MockAMB.sol";
+import {Message} from "telepathy-contracts/amb/interfaces/ITelepathy.sol";
+import {MockTelepathy} from "telepathy-contracts/amb/mocks/MockTelepathy.sol";
 import {TelepathyOracle, RequestStatus, RequestData} from "src/oracle/TelepathyOracle.sol";
 import {TelepathyOracleFulfiller} from "src/oracle/TelepathyOracleFulfiller.sol";
 import {IOracleCallbackReceiver} from "src/oracle/interfaces/IOracleCallbackReceiver.sol";
