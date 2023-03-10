@@ -8,8 +8,8 @@ enum SubscriptionStatus {
 }
 
 struct SubscriptionData {
-    uint32 destinationChainId;
-    address destinationAddress;
+    uint32 sourceChainId;
+    address sourceAddress;
     address callbackAddress;
     bytes32 eventSig;
 }
@@ -25,13 +25,13 @@ contract TelepathySubsciber {
     mapping(bytes32 => SubscriptionStatus) public subscriptions;
 
     function subscribe(
-        uint32 _destinationChainId,
-        address _destinationAddress,
+        uint32 _sourceChainId,
+        address _sourceAddress,
         address _callbackAddress,
         bytes32 _eventSig
     ) external returns (bytes32 subscriptionId) {
         SubscriptionData memory subscriptionData =
-            SubscriptionData(_destinationChainId, _destinationAddress, _callbackAddress, _eventSig);
+            SubscriptionData(_sourceChainId, _sourceAddress, _callbackAddress, _eventSig);
         subscriptionId = keccak256(abi.encode(subscriptionData));
 
         if (subscriptions[subscriptionId] == SubscriptionStatus.SUBSCRIBED) {
@@ -45,12 +45,12 @@ contract TelepathySubsciber {
     }
 
     /// @dev Only the original callbackAddress contract will be able to unsubscribe.
-    function unsubscribe(uint32 _destinationChainId, address _destinationAddress, bytes32 _eventSig)
+    function unsubscribe(uint32 _sourceChainId, address _sourceAddress, bytes32 _eventSig)
         external
         returns (bytes32)
     {
         SubscriptionData memory subscriptionData =
-            SubscriptionData(_destinationChainId, _destinationAddress, msg.sender, _eventSig);
+            SubscriptionData(_sourceChainId, _sourceAddress, msg.sender, _eventSig);
         bytes32 subscriptionId = keccak256(abi.encode(subscriptionData));
 
         if (subscriptions[subscriptionId] == SubscriptionStatus.UNSUBSCIBED) {
@@ -62,18 +62,18 @@ contract TelepathySubsciber {
     }
 }
 
-/// @notice This contract is used to subscribe to a cross-chain events from a destination contract.
+/// @notice This contract is used to subscribe to a cross-chain events from a source contract.
 contract TestEventSubsciber is TelepathyHandler {
     event CrossChainIncremented(uint256 value, address sender);
 
-    error InvalidDestinationChain(uint32 destinationChainId);
-    error InvalidDestinationAddress(address destinationAddress);
+    error InvalidSourceChain(uint32 sourceChainId);
+    error InvalidSourceAddress(address sourceAddress);
     error InvalidSubscriptionId(bytes32 subscriptionId);
     error InvalidEventSig(bytes32 eventSig);
 
     TelepathySubsciber immutable telepathySubsciber;
-    uint32 immutable EVENT_DESTINATION_CHAIN_ID;
-    address immutable EVENT_DESTINATION_ADDRESS;
+    uint32 immutable EVENT_SOURCE_CHAIN_ID;
+    address immutable EVENT_SOURCE_ADDRESS;
     bytes32 immutable EVENT_SIG; // e.g. keccak256("Incremented(uint256,address)");
 
     bytes32 subscriptionId;
@@ -81,50 +81,47 @@ contract TestEventSubsciber is TelepathyHandler {
     constructor(
         address _telepathySubsciber,
         address _telepathyRouter,
-        uint32 _destinationChainId,
-        address _destinationAddress,
+        uint32 _sourceChainId,
+        address _sourceAddress,
         bytes32 _eventSig
     ) TelepathyHandler(_telepathyRouter) {
         telepathySubsciber = TelepathySubsciber(_telepathySubsciber);
-        EVENT_DESTINATION_CHAIN_ID = _destinationChainId;
-        EVENT_DESTINATION_ADDRESS = _destinationAddress;
+        EVENT_SOURCE_CHAIN_ID = _sourceChainId;
+        EVENT_SOURCE_ADDRESS = _sourceAddress;
         EVENT_SIG = _eventSig;
     }
 
-    function subscribeToEvent(uint32 _destinationChainId, address _destinationAddress) external {
+    function subscribeToEvent(uint32 _sourceChainId, address _sourceAddress) external {
         bytes32 subscribeId = telepathySubsciber.subscribe(
-            _destinationChainId, _destinationAddress, address(this), EVENT_SIG
+            _sourceChainId, _sourceAddress, address(this), EVENT_SIG
         );
         subscriptionId = subscribeId;
     }
 
-    function unsubscribeFromEvent(uint32 _destinationChainId, address _destinationAddress)
+    function unsubscribeFromEvent(uint32 _sourceChainId, address _sourceAddress)
         external
     {
-        telepathySubsciber.unsubscribe(_destinationChainId, _destinationAddress, EVENT_SIG);
+        telepathySubsciber.unsubscribe(_sourceChainId, _sourceAddress, EVENT_SIG);
     }
 
     function handleTelepathyImpl(
-        uint32 _destinationChain,
-        address _destinationAddress,
+        uint32 _sourceChain,
+        address _sourceAddress,
         bytes memory _data
     ) internal override {
-        if (_destinationChain != EVENT_DESTINATION_CHAIN_ID) {
-            revert InvalidDestinationChain(_destinationChain);
+        if (_sourceChain != EVENT_SOURCE_CHAIN_ID) {
+            revert InvalidSourceChain(_sourceChain);
         }
 
-        if (_destinationAddress != EVENT_DESTINATION_ADDRESS) {
-            revert InvalidDestinationAddress(_destinationAddress);
+        if (_sourceAddress != EVENT_SOURCE_ADDRESS) {
+            revert InvalidSourceAddress(_sourceAddress);
         }
 
-        (bytes32 subId, bytes32 eventSig, bytes memory eventData) =
-            abi.decode(_data, (bytes32, bytes32, bytes));
+        (bytes32 subId, bytes memory eventData) =
+            abi.decode(_data, (bytes32, bytes));
 
         if (subId != subscriptionId) {
             revert InvalidSubscriptionId(subId);
-        }
-        if (eventSig != EVENT_SIG) {
-            revert InvalidEventSig(eventSig);
         }
 
         (uint256 value, address incrementer) = abi.decode(eventData, (uint256, address));
