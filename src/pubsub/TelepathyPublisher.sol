@@ -19,6 +19,8 @@ contract TelepathyPublisher {
 
     TelepathyRouter telepathyRouter;
 
+    mapping(bytes32 => bool) public eventsPublished;
+
     constructor(address _telepathyRouter) {
         telepathyRouter = TelepathyRouter(_telepathyRouter);
     }
@@ -45,6 +47,10 @@ contract TelepathyPublisher {
     ) external {
         requireLightClientConsistency(subscriptionData.sourceChainId);
         requireNotFrozen(subscriptionData.sourceChainId);
+
+        bytes32 eventKey = keccak256(abi.encode(receiptsRoot, logIndex));
+        require(!eventsPublished[eventKey], "Event already published");
+        eventsPublished[eventKey] = true;
 
         {
             (uint64 srcSlot, uint64 txSlot) = abi.decode(srcSlotTxSlotPack, (uint64, uint64));
