@@ -11,7 +11,7 @@ import {Address} from "telepathy-contracts/libraries/Typecast.sol";
 // TODO: This (and Oracle Fulfiller) probably should have access control so the router reference can be set again.
 
 /// @notice A contract that can publish events to a TelepathySubscriber.
-/// @dev For true "PubSub" we should handle N many subscribers. This currently just handles one subscriber per publish call.
+/// @dev For true "PubSub" we should handle N many Subscribers. This currently just handles one Subscriber per publish call.
 contract TelepathyPublisher {
     event Publish(bytes32 indexed subscriptionId, bool received);
 
@@ -21,7 +21,7 @@ contract TelepathyPublisher {
         telepathyRouter = TelepathyRouter(_telepathyRouter);
     }
 
-    /// @notice Publishes an event emit to a callback subscriber, given an event proof.
+    /// @notice Publishes an event emit to a callback Subscriber, given an event proof.
     /// @param srcSlotTxSlotPack The slot where we want to read the header from and the slot where
     ///                          the tx executed, packed as two uint64s.
     /// @param receiptsRootProof A merkle proof proving the receiptsRoot in the block header.
