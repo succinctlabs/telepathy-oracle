@@ -10,6 +10,8 @@ import {Address} from "telepathy-contracts/libraries/Typecast.sol";
 
 // TODO: This (and Oracle Fulfiller) probably should have access control so the router reference can be set again.
 
+/// @title TelepathyPublisher
+/// @author Succinct Labs
 /// @notice A contract that can publish events to a TelepathySubscriber.
 /// @dev For true "PubSub" we should handle N many Subscribers. This currently just handles one Subscriber per publish call.
 contract TelepathyPublisher {
@@ -41,13 +43,6 @@ contract TelepathyPublisher {
         SubscriptionData calldata subscriptionData,
         bytes calldata eventData
     ) external {
-        if (
-            address(telepathyRouter.lightClients(subscriptionData.sourceChainId)) == address(0)
-                || telepathyRouter.broadcasters(subscriptionData.sourceChainId) == address(0)
-        ) {
-            revert("Light client or broadcaster for source chain is not set");
-        }
-
         requireLightClientConsistency(subscriptionData.sourceChainId);
         requireNotFrozen(subscriptionData.sourceChainId);
 
@@ -68,7 +63,7 @@ contract TelepathyPublisher {
                 receiptsRoot,
                 txIndexRLPEncoded,
                 logIndex,
-                telepathyRouter.broadcasters(subscriptionData.sourceChainId),
+                subscriptionData.sourceAddress,
                 subscriptionData.eventSig
             );
         }

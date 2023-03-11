@@ -8,6 +8,8 @@ library EventProof {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for bytes;
 
+    /// @dev A modified version of StateProofHelper.getEventTopic(), but instead just checks to see
+    ///      that the eventSignature is valid.
     function verifyEvent(
         bytes[] memory proof,
         bytes32 receiptRoot,

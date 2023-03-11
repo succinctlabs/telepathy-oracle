@@ -12,6 +12,9 @@ struct SubscriptionData {
     bytes32 eventSig;
 }
 
+/// @title TelepathySubscriber
+/// @author Succinct Labs
+/// @notice This allows contracts to subscribe to cross-chain events from a source contract.
 contract TelepathySubscriber {
     event Subscribe(bytes32 indexed subscriptionId, SubscriptionData subscriptionData);
     event Unsubscribe(bytes32 indexed subscriptionId, SubscriptionData subscriptionData);
