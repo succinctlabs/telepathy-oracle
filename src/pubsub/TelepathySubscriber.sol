@@ -5,7 +5,7 @@ enum SubscriptionStatus {
     SUBSCRIBED
 }
 
-struct SubscriptionData {
+struct Subscription {
     uint32 sourceChainId;
     address sourceAddress;
     address callbackAddress;
@@ -16,8 +16,8 @@ struct SubscriptionData {
 /// @author Succinct Labs
 /// @notice This allows contracts to subscribe to cross-chain events from a source contract.
 contract TelepathySubscriber {
-    event Subscribe(bytes32 indexed subscriptionId, SubscriptionData subscriptionData);
-    event Unsubscribe(bytes32 indexed subscriptionId, SubscriptionData subscriptionData);
+    event Subscribe(bytes32 indexed subscriptionId, Subscription subscription);
+    event Unsubscribe(bytes32 indexed subscriptionId, Subscription subscription);
 
     error SubscriptionAlreadyActive(bytes32 subscriptionId);
     error SubscriptionNotActive(bytes32 subscriptionId);
@@ -30,16 +30,16 @@ contract TelepathySubscriber {
         address _callbackAddress,
         bytes32 _eventSig
     ) external returns (bytes32 subscriptionId) {
-        SubscriptionData memory subscriptionData =
-            SubscriptionData(_sourceChainId, _sourceAddress, _callbackAddress, _eventSig);
-        subscriptionId = keccak256(abi.encode(subscriptionData));
+        Subscription memory subscription =
+            Subscription(_sourceChainId, _sourceAddress, _callbackAddress, _eventSig);
+        subscriptionId = keccak256(abi.encode(subscription));
 
         if (subscriptions[subscriptionId] == SubscriptionStatus.SUBSCRIBED) {
             revert SubscriptionAlreadyActive(subscriptionId);
         }
         subscriptions[subscriptionId] = SubscriptionStatus.SUBSCRIBED;
 
-        emit Subscribe(subscriptionId, subscriptionData);
+        emit Subscribe(subscriptionId, subscription);
 
         return subscriptionId;
     }
@@ -48,15 +48,15 @@ contract TelepathySubscriber {
     function unsubscribe(uint32 _sourceChainId, address _sourceAddress, bytes32 _eventSig)
         external
     {
-        SubscriptionData memory subscriptionData =
-            SubscriptionData(_sourceChainId, _sourceAddress, msg.sender, _eventSig);
-        bytes32 subscriptionId = keccak256(abi.encode(subscriptionData));
+        Subscription memory subscription =
+            Subscription(_sourceChainId, _sourceAddress, msg.sender, _eventSig);
+        bytes32 subscriptionId = keccak256(abi.encode(subscription));
 
         if (subscriptions[subscriptionId] == SubscriptionStatus.UNSUBSCIBED) {
             revert SubscriptionNotActive(subscriptionId);
         }
         subscriptions[subscriptionId] = SubscriptionStatus.UNSUBSCIBED;
 
-        emit Unsubscribe(subscriptionId, subscriptionData);
+        emit Unsubscribe(subscriptionId, subscription);
     }
 }

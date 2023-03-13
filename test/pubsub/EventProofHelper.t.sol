@@ -6,7 +6,7 @@ import {MockTelepathy} from "telepathy-contracts/amb/mocks/MockTelepathy.sol";
 import {
     TelepathySubscriber,
     SubscriptionStatus,
-    SubscriptionData
+    Subscription
 } from "src/pubsub/TelepathySubscriber.sol";
 import {TelepathyHandler} from "telepathy-contracts/amb/interfaces/TelepathyHandler.sol";
 
@@ -23,7 +23,7 @@ contract EventProofHelperTest is Test, EventProofFixture {
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
 
-    uint256 constant FIXTURE_START = 22;
+    uint256 constant FIXTURE_START = 18;
     uint256 constant FIXTURE_END = 22;
 
     Fixture[] fixtures;
@@ -34,18 +34,14 @@ contract EventProofHelperTest is Test, EventProofFixture {
             uint256 msgNonce = i;
 
             string memory filename = string.concat("eventProof", Strings.toString(msgNonce));
-            console.log("/test/pubsub/fixtures/", filename, ".json");
             string memory path =
                 string.concat(vm.projectRoot(), "/test/pubsub/fixtures/", filename, ".json");
             try vm.readFile(path) returns (string memory file) {
                 bytes memory parsed = vm.parseJson(file);
                 fixtures.push(abi.decode(parsed, (Fixture)));
             } catch {
-                console.log("fixture not found: %s", path);
                 continue;
             }
-
-            console.log("loaded fixture: %s", filename);
         }
     }
 
@@ -74,7 +70,51 @@ contract EventProofHelperTest is Test, EventProofFixture {
             bytes[] memory proof = buildEventProof(fixture);
 
             Log memory log = Log(address(0), fixture.logTopics, fixture.logData);
-            vm.expectRevert();
+            vm.expectRevert("Event was not emitted by source contract");
+            EventProof.verifyEvent(
+                proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
+            );
+        }
+    }
+
+    function test_VerifyEvent_WhenLogTopicsLengthInvalid() public {
+        for (uint256 i = 0; i < fixtures.length; i++) {
+            Fixture memory fixture = fixtures[i];
+
+            bytes[] memory proof = buildEventProof(fixture);
+
+            bytes32[] memory badTopics = new bytes32[](fixture.logTopics.length-1);
+            Log memory log = Log(fixture.logSource, badTopics, fixture.logData);
+            vm.expectRevert("Event topic length does not match");
+            EventProof.verifyEvent(
+                proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
+            );
+        }
+    }
+
+    function test_VerifyEvent_WhenLogTopicsInvalid() public {
+        for (uint256 i = 0; i < fixtures.length; i++) {
+            Fixture memory fixture = fixtures[i];
+
+            bytes[] memory proof = buildEventProof(fixture);
+            bytes32[] memory badTopics = new bytes32[](fixture.logTopics.length);
+            Log memory log = Log(fixture.logSource, badTopics, fixture.logData);
+            vm.expectRevert("Event topic does not match");
+            EventProof.verifyEvent(
+                proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
+            );
+        }
+    }
+
+    function test_VerifyEvent_WhenLogDataInvalid() public {
+        for (uint256 i = 0; i < fixtures.length; i++) {
+            Fixture memory fixture = fixtures[i];
+
+            bytes[] memory proof = buildEventProof(fixture);
+
+            bytes memory badData = "bad data";
+            Log memory log = Log(fixture.logSource, fixture.logTopics, badData);
+            vm.expectRevert("Event data does not match");
             EventProof.verifyEvent(
                 proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
             );

@@ -1,6 +1,6 @@
 pragma solidity ^0.8.16;
 
-import {SubscriptionData} from "src/pubsub/TelepathySubscriber.sol";
+import {Subscription} from "src/pubsub/TelepathySubscriber.sol";
 import {Log, EventProof} from "src/pubsub/EventProofHelper.sol";
 
 import {TelepathyRouter} from "telepathy-contracts/amb/TelepathyRouter.sol";
@@ -18,8 +18,7 @@ enum PublishStatus {
 
 /// @title TelepathyPublisher
 /// @author Succinct Labs
-/// @notice A contract that can publish events to a TelepathySubscriber.
-/// @dev For true "PubSub" we should handle N many Subscribers. This currently just handles one Subscriber per publish call.
+/// @notice A contract that can publish events to a TelepathySubscriber contract.
 contract TelepathyPublisher {
     event Publish(
         bytes32 indexed subscriptionId,
@@ -27,14 +26,6 @@ contract TelepathyPublisher {
         address indexed sourceAddress,
         address callbackAddress,
         bool success
-    );
-
-    event ExecutedMessage(
-        uint32 indexed sourceChainId,
-        uint64 indexed nonce,
-        bytes32 indexed msgHash,
-        bytes message,
-        bool status
     );
 
     TelepathyRouter telepathyRouter;
@@ -52,8 +43,9 @@ contract TelepathyPublisher {
     /// @param receiptsRoot The receipts root which contains the event.
     /// @param txIndexRLPEncoded The index of our transaction inside the block RLP encoded.
     /// @param logIndex The index of the event in our transaction.
-    /// @param subscriptionData The subscription data (sourceChainId, sourceAddress, callbackAddress, eventSig).
-    /// @dev subscriptionData struct is being used to avoid stack-too-deep
+    /// @param log The event log in the form: [address, topics, data].
+    /// @param subscription The subscription data (sourceChainId, sourceAddress, callbackAddress, eventSig).
+    /// @dev This function should be called for every subscriber that is subscribed to the event.
     function publishEvent(
         bytes calldata srcSlotTxSlotPack,
         bytes32[] calldata receiptsRootProof,
@@ -62,21 +54,21 @@ contract TelepathyPublisher {
         bytes memory txIndexRLPEncoded,
         uint256 logIndex,
         Log calldata log,
-        SubscriptionData calldata subscriptionData
+        Subscription calldata subscription
     ) external {
-        requireLightClientConsistency(subscriptionData.sourceChainId);
-        requireNotFrozen(subscriptionData.sourceChainId);
+        requireLightClientConsistency(subscription.sourceChainId);
+        requireNotFrozen(subscription.sourceChainId);
 
         // Ensure the event has only been published to a subscriber once.
-        bytes32 eventKey =
-            keccak256(abi.encode(receiptsRoot, logIndex, subscriptionData.callbackAddress));
-        require(eventsPublished[eventKey] == PublishStatus.NOT_EXECUTED, "Event already published");
+        bytes32 publishKey =
+            keccak256(abi.encode(receiptsRoot, logIndex, subscription.callbackAddress));
+        require(eventsPublished[publishKey] == PublishStatus.NOT_EXECUTED, "Event already published");
 
         {
             (uint64 srcSlot, uint64 txSlot) = abi.decode(srcSlotTxSlotPack, (uint64, uint64));
-            requireLightClientDelay(srcSlot, subscriptionData.sourceChainId);
+            requireLightClientDelay(srcSlot, subscription.sourceChainId);
             bytes32 headerRoot =
-                telepathyRouter.lightClients(subscriptionData.sourceChainId).headers(srcSlot);
+                telepathyRouter.lightClients(subscription.sourceChainId).headers(srcSlot);
             require(headerRoot != bytes32(0), "HeaderRoot is missing");
             bool isValid =
                 SSZ.verifyReceiptsRoot(receiptsRoot, receiptsRootProof, headerRoot, srcSlot, txSlot);
@@ -87,7 +79,7 @@ contract TelepathyPublisher {
             EventProof.verifyEvent(receiptProof, receiptsRoot, txIndexRLPEncoded, logIndex, log);
         }
 
-        _publish(subscriptionData, eventKey, log);
+        _publish(subscription, publishKey, log);
     }
 
     /// @notice Checks that the light client for a given chainId is consistent.
@@ -122,11 +114,11 @@ contract TelepathyPublisher {
 
     /// @notice Executes the callback function on the subscriber, and marks the event publish as successful or failed.
     function _publish(
-        SubscriptionData calldata subscriptionData,
+        Subscription calldata subscription,
         bytes32 eventKey,
         Log calldata log
     ) internal {
-        bytes32 subscriptionId = keccak256(abi.encode(subscriptionData));
+        bytes32 subscriptionId = keccak256(abi.encode(subscription));
         bytes memory encodedData = abi.encode(subscriptionId, log);
 
         bool status;
@@ -134,11 +126,11 @@ contract TelepathyPublisher {
         {
             bytes memory receiveCall = abi.encodeWithSelector(
                 ITelepathyHandler.handleTelepathy.selector,
-                subscriptionData.sourceChainId,
-                subscriptionData.sourceAddress,
+                subscription.sourceChainId,
+                subscription.sourceAddress,
                 encodedData
             );
-            (status, data) = subscriptionData.callbackAddress.call(receiveCall);
+            (status, data) = subscription.callbackAddress.call(receiveCall);
         }
 
         bool implementsHandler = false;
@@ -155,9 +147,9 @@ contract TelepathyPublisher {
 
         emit Publish(
             subscriptionId,
-            subscriptionData.sourceChainId,
-            subscriptionData.sourceAddress,
-            subscriptionData.callbackAddress,
+            subscription.sourceChainId,
+            subscription.sourceAddress,
+            subscription.callbackAddress,
             status
         );
     }

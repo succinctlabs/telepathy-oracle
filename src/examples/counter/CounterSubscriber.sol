@@ -3,7 +3,7 @@ pragma solidity ^0.8.16;
 import {
     TelepathySubscriber,
     SubscriptionStatus,
-    SubscriptionData
+    Subscription
 } from "src/pubsub/TelepathySubscriber.sol";
 import {TelepathyHandler} from "telepathy-contracts/amb/interfaces/TelepathyHandler.sol";
 
