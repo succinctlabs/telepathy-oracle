@@ -8,6 +8,13 @@ import {ITelepathyHandler} from "telepathy-contracts/amb/interfaces/TelepathyHan
 import {SSZ} from "telepathy-contracts/libraries/SimpleSerialize.sol";
 import {Address} from "telepathy-contracts/libraries/Typecast.sol";
 
+enum PublishStatus {
+    NOT_EXECUTED,
+    EXECUTION_FAILED,
+    EXECUTION_SUCCEEDED
+}
+
+
 // TODO: This (and Oracle Fulfiller) probably should have access control so the router reference can be set again.
 
 /// @title TelepathyPublisher
@@ -42,15 +49,16 @@ contract TelepathyPublisher {
         bytes[] calldata receiptProof,
         bytes memory txIndexRLPEncoded,
         uint256 logIndex,
-        SubscriptionData calldata subscriptionData,
-        bytes calldata eventData
+        SubscriptionData calldata subscriptionData
     ) external {
         requireLightClientConsistency(subscriptionData.sourceChainId);
         requireNotFrozen(subscriptionData.sourceChainId);
 
-        bytes32 eventKey = keccak256(abi.encode(receiptsRoot, logIndex));
-        require(!eventsPublished[eventKey], "Event already published");
-        eventsPublished[eventKey] = true;
+        // Ensure the event has only been published to a subscriber once.
+        bytes32 eventKey = keccak256(abi.encode(receiptsRoot, logIndex, subscriptionData.callbackAddress));
+        if(eventsPublished[eventKey] != PublishStatus.NOT_EXECUTED) {
+            revert EventAlreadyPublished();
+        }
 
         {
             (uint64 srcSlot, uint64 txSlot) = abi.decode(srcSlotTxSlotPack, (uint64, uint64));
@@ -64,7 +72,7 @@ contract TelepathyPublisher {
         }
 
         {
-            EventProof.verifyEvent(
+            bytes eventData = EventProof.getEventData(
                 receiptProof,
                 receiptsRoot,
                 txIndexRLPEncoded,
@@ -74,7 +82,7 @@ contract TelepathyPublisher {
             );
         }
 
-        _publish(subscriptionData, eventData);
+        bool recieved = _publish(subscriptionData, eventData);
     }
 
     /// @notice Checks that the light client for a given chainId is consistent.
@@ -107,8 +115,10 @@ contract TelepathyPublisher {
         );
     }
 
-    function _publish(SubscriptionData calldata subscriptionData, bytes memory eventData)
+    /// @notice Executes the callback function on the subscriber, and marks the event publish as successful or failed.
+    function _publish(SubscriptionData calldata subscriptionData, bytes32 eventKey, bytes memory eventData)
         internal
+        returns (bool)
     {
         bytes32 subscriptionId = keccak256(abi.encode(subscriptionData));
         bytes memory data = abi.encode(subscriptionId, eventData);
@@ -122,6 +132,18 @@ contract TelepathyPublisher {
                 data
             );
             (recieved,) = subscriptionData.callbackAddress.call(receiveCall);
+        }
+
+        bool implementsHandler = false;
+        if (data.length == 32) {
+            (bytes4 magic) = abi.decode(data, (bytes4));
+            implementsHandler = magic == ITelepathyHandler.handleTelepathy.selector;
+        }
+
+        if (status && implementsHandler) {
+            eventsPublished[eventKey] = PublishStatus.EXECUTION_SUCCEEDED;
+        } else {
+            eventsPublished[eventKey] = PublishStatus.EXECUTION_FAILED;
         }
 
         emit Publish(subscriptionId, recieved);

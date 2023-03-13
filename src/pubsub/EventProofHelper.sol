@@ -69,16 +69,14 @@ library EventProof {
         );
     }
 
-    function getEventTopic(
+    function getEventData(
         bytes[] memory proof,
         bytes32 receiptRoot,
         bytes memory key,
         uint256 logIndex,
         address sourceContract,
-        bytes32 eventSignature,
-        bytes eventTopics,
-        bytes eventBytes
-    ) internal pure returns (bytes32) {
+        bytes32 eventSignature
+    ) internal returns (bytes memory) {
         bytes memory value = MerkleTrie.get(key, proof, receiptRoot);
         bytes1 txTypeOrFirstByte = value[0];
 
@@ -128,8 +126,21 @@ library EventProof {
             "Event signature does not match eventSignature"
         );
 
-        // Validate that the data is valid
-        RLPReader.RLPItem[] memory data = relevantLog[2].readList();
-        data.append(RLPReader.toRlpItem(eventTopics));
+        bytes memory eventData = parseEventTopicAndData(relevantLog[1].readList(), relevantLog[2].readBytes());
+        return eventData;
+    }
+
+    function parseEventTopicAndData(RLPReader.RLPItem[] memory topics, bytes memory data) internal returns (bytes memory eventData) {
+        if (topics.length == 1) { // no indexed params
+            eventData = abi.encodePacked(data);
+        } else if (topics.length == 2) { // 1 indexed param
+            eventData = abi.encodePacked(topics[1].readBytes(), data);
+        } else if (topics.length == 3) { // 2 indexed params
+            eventData = abi.encodePacked(topics[1].readBytes(), topics[2].readBytes(), data);
+        } else if (topics.length == 4) { // 3 indexed params
+            eventData = abi.encodePacked(topics[1].readBytes(), topics[2].readBytes(), topics[3].readBytes(), data);
+        } else {
+            revert("Invalid number of topics");
+        }
     }
 }
