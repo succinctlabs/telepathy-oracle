@@ -4,8 +4,12 @@ import {RLPReader} from "optimism-bedrock-contracts/rlp/RLPReader.sol";
 import {RLPWriter} from "optimism-bedrock-contracts/rlp/RLPWriter.sol";
 import {MerkleTrie} from "optimism-bedrock-contracts/trie/MerkleTrie.sol";
 
-// Equivalent to the https://github.com/succinctlabs/telepathy/blob/00482454f7301be012a165560e2368aa7d375992/node_modules/%40ethereumjs/evm/src/types.ts#L226
-// export type Log = [address: Buffer, topics: Buffer[], data: Buffer]
+/// @param source The address of the contract that emitted the log.
+/// @param topics The topics associated with the log, length changes with # of indexed fields.
+/// @param data The data associated with the log.
+/// @dev For easy off-chain usage, this is equivalant to:
+///     https://github.com/ethereumjs/ethereumjs-monorepo/blob/2e1826e4a14fda708857f7d3243c2b897e4a10fa/packages/evm/src/types.ts#L234
+///     export type Log = [address: Buffer, topics: Buffer[], data: Buffer]
 struct Log {
     address source;
     bytes32[] topics;
