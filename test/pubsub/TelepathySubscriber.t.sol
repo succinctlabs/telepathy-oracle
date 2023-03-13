@@ -32,9 +32,7 @@ contract TelepathySubscriberTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Subscribe(
             keccak256(
-                abi.encode(
-                    Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
-                )
+                abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
@@ -49,9 +47,7 @@ contract TelepathySubscriberTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Subscribe(
             keccak256(
-                abi.encode(
-                    Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
-                )
+                abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
@@ -75,9 +71,7 @@ contract TelepathySubscriberTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Subscribe(
             keccak256(
-                abi.encode(
-                    Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
-                )
+                abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
@@ -90,9 +84,7 @@ contract TelepathySubscriberTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Unsubscribe(
             keccak256(
-                abi.encode(
-                    Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
-                )
+                abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
@@ -107,9 +99,7 @@ contract TelepathySubscriberTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Subscribe(
             keccak256(
-                abi.encode(
-                    Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
-                )
+                abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
@@ -122,9 +112,7 @@ contract TelepathySubscriberTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Unsubscribe(
             keccak256(
-                abi.encode(
-                    Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
-                )
+                abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
@@ -147,9 +135,7 @@ contract TelepathySubscriberTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Subscribe(
             keccak256(
-                abi.encode(
-                    Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
-                )
+                abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
@@ -159,9 +145,8 @@ contract TelepathySubscriberTest is Test {
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
         );
 
-        bytes32 mismatchSubscriptionId = keccak256(
-            abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, msg.sender, EVENT_SIG))
-        );
+        bytes32 mismatchSubscriptionId =
+            keccak256(abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, msg.sender, EVENT_SIG)));
         vm.prank(msg.sender);
         vm.expectRevert(
             abi.encodeWithSignature("SubscriptionNotActive(bytes32)", mismatchSubscriptionId)

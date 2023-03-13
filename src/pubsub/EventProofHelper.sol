@@ -15,7 +15,7 @@ struct Log {
 library EventProof {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for bytes;
-    
+
     /// @notice Verifies that the given log data is valid for the given event proof.
     function verifyEvent(
         bytes[] memory proof,

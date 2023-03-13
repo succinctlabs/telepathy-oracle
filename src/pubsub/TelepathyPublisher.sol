@@ -62,7 +62,9 @@ contract TelepathyPublisher {
         // Ensure the event has only been published to a subscriber once.
         bytes32 publishKey =
             keccak256(abi.encode(receiptsRoot, logIndex, subscription.callbackAddress));
-        require(eventsPublished[publishKey] == PublishStatus.NOT_EXECUTED, "Event already published");
+        require(
+            eventsPublished[publishKey] == PublishStatus.NOT_EXECUTED, "Event already published"
+        );
 
         {
             (uint64 srcSlot, uint64 txSlot) = abi.decode(srcSlotTxSlotPack, (uint64, uint64));
@@ -113,11 +115,9 @@ contract TelepathyPublisher {
     }
 
     /// @notice Executes the callback function on the subscriber, and marks the event publish as successful or failed.
-    function _publish(
-        Subscription calldata subscription,
-        bytes32 eventKey,
-        Log calldata log
-    ) internal {
+    function _publish(Subscription calldata subscription, bytes32 eventKey, Log calldata log)
+        internal
+    {
         bytes32 subscriptionId = keccak256(abi.encode(subscription));
         bytes memory encodedData = abi.encode(subscriptionId, log);
 
