@@ -1,17 +1,16 @@
 pragma solidity ^0.8.16;
 
-import {
-    TelepathySubscriber,
-    SubscriptionStatus,
-    Subscription
-} from "src/pubsub/TelepathySubscriber.sol";
-import {TelepathyHandler} from "telepathy-contracts/amb/interfaces/TelepathyHandler.sol";
+import {ISubscriber, Subscription, EventLog} from "src/pubsub/interfaces/IPubSub.sol";
+
+import {ISubscriptionCallbackReceiver} from
+    "src/pubsub/interfaces/ISubscriptionCallbackReceiver.sol";
 
 /// @notice Example counter deployed on the source chain to listen to.
+/// @dev Importantly, this contract does not need any special logic to handle it's events being subscribed to.
 contract Counter {
     uint256 public counter = 0;
 
-    event Incremented(uint256 count, address sender);
+    event Incremented(uint256 indexed count, address sender);
 
     function increment() external {
         counter += 1;
@@ -20,7 +19,7 @@ contract Counter {
 }
 
 /// @notice This contract is used to subscribe to a cross-chain events from a source counter.
-contract CounterSubscriber is TelepathyHandler {
+contract CounterSubscriber is ISubscriptionCallbackReceiver {
     event CrossChainIncremented(uint256 value, address sender);
 
     error InvalidSourceChain(uint32 sourceChainId);
@@ -28,29 +27,27 @@ contract CounterSubscriber is TelepathyHandler {
     error InvalidSubscriptionId(bytes32 subscriptionId);
     error InvalidEventSig(bytes32 eventSig);
 
-    TelepathySubscriber immutable telepathySubscriber;
+    ISubscriber immutable telepathySubscriber;
     uint32 immutable EVENT_SOURCE_CHAIN_ID;
     address immutable EVENT_SOURCE_ADDRESS;
     bytes32 immutable EVENT_SIG = keccak256("Incremented(uint256,address)");
 
     bytes32 subscriptionId;
 
-    constructor(
-        address _telepathySubscriber,
-        address _telepathyRouter,
-        uint32 _sourceChainId,
-        address _sourceAddress
-    ) TelepathyHandler(_telepathyRouter) {
-        telepathySubscriber = TelepathySubscriber(_telepathySubscriber);
+    // function handlePublish(
+    //     bytes32 subscriptionId,
+    //     uint32 sourceChainId,
+    //     address sourceAddress,
+    //     EventLog memory log
+    // ) external;
+
+    constructor(address _telepathySubscriber, uint32 _sourceChainId, address _sourceAddress) {
+        telepathySubscriber = ISubscriber(_telepathySubscriber);
         EVENT_SOURCE_CHAIN_ID = _sourceChainId;
         EVENT_SOURCE_ADDRESS = _sourceAddress;
     }
 
-    function subscribeToEvent(
-        uint32 _sourceChainId,
-        address _sourceAddress,
-        uint32 startTimeToListen
-    ) external {
+    function subscribeToEvent(uint32 _sourceChainId, address _sourceAddress) external {
         subscriptionId = telepathySubscriber.subscribe(
             _sourceChainId, _sourceAddress, address(this), EVENT_SIG, 0, 0
         );
@@ -60,26 +57,24 @@ contract CounterSubscriber is TelepathyHandler {
         telepathySubscriber.unsubscribe(_sourceChainId, _sourceAddress, EVENT_SIG);
     }
 
-    function handleTelepathyImpl(uint32 _sourceChain, address _sourceAddress, bytes memory _data)
-        internal
-        override
-    {
-        if (_sourceChain != EVENT_SOURCE_CHAIN_ID) {
-            revert InvalidSourceChain(_sourceChain);
+    function handlePublish(
+        bytes32 _subscriptionId,
+        uint32 _sourceChainId,
+        address _sourceAddress,
+        EventLog memory _eventlog
+    ) external {
+        if (_sourceChainId != EVENT_SOURCE_CHAIN_ID) {
+            revert InvalidSourceChain(_sourceChainId);
         }
 
         if (_sourceAddress != EVENT_SOURCE_ADDRESS) {
             revert InvalidSourceAddress(_sourceAddress);
         }
 
-        (bytes32 subId, bytes memory eventData) = abi.decode(_data, (bytes32, bytes));
-
-        if (subId != subscriptionId) {
-            revert InvalidSubscriptionId(subId);
+        if (_subscriptionId != subscriptionId) {
+            revert InvalidSubscriptionId(_subscriptionId);
         }
 
-        (uint256 value, address incrementer) = abi.decode(eventData, (uint256, address));
-
-        emit CrossChainIncremented(value, incrementer);
+        emit CrossChainIncremented(uint256(_eventlog.topics[1]), _eventlog.source);
     }
 }

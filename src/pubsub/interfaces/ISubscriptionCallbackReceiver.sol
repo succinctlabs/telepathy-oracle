@@ -4,9 +4,9 @@ import {EventLog} from "src/pubsub/interfaces/IPubSub.sol";
 
 interface ISubscriptionCallbackReceiver {
     function handlePublish(
-        bytes32 sub,
+        bytes32 subscriptionId,
         uint32 sourceChainId,
         address sourceAddress,
-        EventLog memory log
+        EventLog memory eventlog
     ) external;
 }

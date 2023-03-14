@@ -1,11 +1,6 @@
 pragma solidity ^0.8.16;
 
-import {Subscription, ISubscriber} from "src/pubsub/interfaces/IPubSub.sol";
-
-enum SubscriptionStatus {
-    UNSUBSCIBED,
-    SUBSCRIBED
-}
+import {Subscription, SubscriptionStatus, ISubscriber} from "src/pubsub/interfaces/IPubSub.sol";
 
 /// @title TelepathySubscriber
 /// @author Succinct Labs

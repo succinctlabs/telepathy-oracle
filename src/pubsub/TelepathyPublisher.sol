@@ -51,9 +51,9 @@ contract TelepathyPublisher is IPublisher {
         requireLightClientConsistency(subscription.sourceChainId);
         requireNotFrozen(subscription.sourceChainId);
 
-        // Ensure the event has only been published to a subscriber once.
+        // Ensure the event emit may only be published to a subscriber once
         bytes32 publishKey =
-            keccak256(abi.encode(receiptsRoot, logIndex, subscription.callbackAddress));
+            keccak256(abi.encode(receiptsRoot, txIndexRLPEncoded, logIndex, keccak256(abi.encode(subscription))));
         require(
             eventsPublished[publishKey] == PublishStatus.NOT_EXECUTED, "Event already published"
         );
@@ -75,7 +75,7 @@ contract TelepathyPublisher is IPublisher {
             );
         }
 
-        _publish(subscription, publishKey, eventLog);
+        _publish(keccak256(abi.encode(subscription)), subscription, publishKey, eventLog);
     }
 
     /// @notice Checks that the light client for a given chainId is consistent.
@@ -110,11 +110,11 @@ contract TelepathyPublisher is IPublisher {
 
     /// @notice Executes the callback function on the subscriber, and marks the event publish as successful or failed.
     function _publish(
+        bytes32 subscriptionId,
         Subscription calldata subscription,
-        bytes32 eventKey,
+        bytes32 publishKey,
         EventLog calldata eventLog
     ) internal {
-        bytes32 subscriptionId = keccak256(abi.encode(subscription));
         bool status;
         bytes memory data;
         {
@@ -135,9 +135,9 @@ contract TelepathyPublisher is IPublisher {
         }
 
         if (status && implementsHandler) {
-            eventsPublished[eventKey] = PublishStatus.EXECUTION_SUCCEEDED;
+            eventsPublished[publishKey] = PublishStatus.EXECUTION_SUCCEEDED;
         } else {
-            eventsPublished[eventKey] = PublishStatus.EXECUTION_FAILED;
+            eventsPublished[publishKey] = PublishStatus.EXECUTION_FAILED;
         }
 
         emit Publish(

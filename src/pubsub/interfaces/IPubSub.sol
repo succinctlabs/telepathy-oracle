@@ -1,6 +1,12 @@
 pragma solidity ^0.8.16;
 
-/// @notice Represents an active subscription.
+/// @notice The possible states a subscription can be in.
+enum SubscriptionStatus {
+    UNSUBSCIBED,
+    SUBSCRIBED
+}
+
+/// @notice Represents an active subscription, specific to the combination of all of the parameters.
 /// @param sourceChainId The chain ID of the source contract.
 /// @param sourceAddress The address of the source contract which emits the target event.
 /// @param callbackAddress The address of the contract which will receive the event data. MUST be implement
