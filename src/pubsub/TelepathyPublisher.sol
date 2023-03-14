@@ -1,7 +1,7 @@
 pragma solidity ^0.8.16;
 
 import {Subscription, IPublisher} from "src/pubsub/interfaces/IPubSub.sol";
-import {EventLog, EventProof} from "src/pubsub/EventProofHelper.sol";
+import {EventLog, EventProof} from "src/pubsub/EventProof.sol";
 import {ISubscriptionCallbackReceiver} from
     "src/pubsub/interfaces/ISubscriptionCallbackReceiver.sol";
 import {TelepathyRouter} from "telepathy-contracts/amb/TelepathyRouter.sol";
@@ -115,8 +115,6 @@ contract TelepathyPublisher is IPublisher {
         EventLog calldata eventLog
     ) internal {
         bytes32 subscriptionId = keccak256(abi.encode(subscription));
-        bytes memory encodedData = abi.encode(subscriptionId, eventLog);
-
         bool status;
         bytes memory data;
         {

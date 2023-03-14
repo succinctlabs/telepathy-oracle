@@ -16,10 +16,10 @@ import {MerkleTrie} from "optimism-bedrock-contracts/trie/MerkleTrie.sol";
 
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-import {EventLog, EventProof} from "src/pubsub/EventProofHelper.sol";
+import {EventLog, EventProof} from "src/pubsub/EventProof.sol";
 import {EventProofFixture} from "test/pubsub/EventProofFixture.sol";
 
-contract EventProofHelperTest is Test, EventProofFixture {
+contract EventProofTest is Test, EventProofFixture {
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
 
@@ -63,7 +63,7 @@ contract EventProofHelperTest is Test, EventProofFixture {
         }
     }
 
-    function test_VerifyEvent_WhenEventLogSourceInvalid() public {
+    function test_VerifyEventRevert_WhenEventLogSourceInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
@@ -77,7 +77,7 @@ contract EventProofHelperTest is Test, EventProofFixture {
         }
     }
 
-    function test_VerifyEvent_WhenEventLogTopicsLengthInvalid() public {
+    function test_VerifyEventRevert_WhenEventLogTopicsLengthInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
@@ -92,7 +92,7 @@ contract EventProofHelperTest is Test, EventProofFixture {
         }
     }
 
-    function test_VerifyEvent_WhenEventLogTopicsInvalid() public {
+    function test_VerifyEventRevert_WhenEventLogTopicsInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
@@ -106,7 +106,7 @@ contract EventProofHelperTest is Test, EventProofFixture {
         }
     }
 
-    function test_VerifyEvent_WhenEventLogDataInvalid() public {
+    function test_VerifyEventRevert_WhenEventLogDataInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
