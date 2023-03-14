@@ -21,19 +21,6 @@ struct Subscription {
     bytes32 eventSig;
 }
 
-/// @notice Represents emitted event data.
-/// @param source The address of the contract that emitted the log.
-/// @param topics The topics associated with the log, length changes with # of indexed fields.
-/// @param data The data associated with the log.
-/// @dev For easy off-chain usage, this is equivalant to:
-///     https://github.com/ethereumjs/ethereumjs-monorepo/blob/2e1826e4a14fda708857f7d3243c2b897e4a10fa/packages/evm/src/types.ts#L234
-///     export type Log = [address: Buffer, topics: Buffer[], data: Buffer]
-struct EventLog {
-    address source;
-    bytes32[] topics;
-    bytes data;
-}
-
 interface ISubscriber {
     /// @notice Emitted when a new subscription is created.
     /// @param subscriptionId The unique identifier for the subscription.

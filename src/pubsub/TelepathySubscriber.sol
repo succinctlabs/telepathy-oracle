@@ -22,10 +22,10 @@ contract TelepathySubscriber is ISubscriber, TelepathyStorage {
         bytes32 _eventSig,
         uint256 _startBlock,
         uint256 _endBlock
-    ) external returns (bytes32 subscriptionId) {
+    ) external returns (bytes32) {
         Subscription memory subscription =
             Subscription(_sourceChainId, _sourceAddress, _callbackAddress, _eventSig);
-        subscriptionId = keccak256(abi.encode(subscription));
+        bytes32 subscriptionId = keccak256(abi.encode(subscription));
 
         if (subscriptions[subscriptionId] == SubscriptionStatus.SUBSCRIBED) {
             revert SubscriptionAlreadyActive(subscriptionId);
@@ -44,7 +44,7 @@ contract TelepathySubscriber is ISubscriber, TelepathyStorage {
 
     /// @dev Only the original callbackAddress contract will be able to unsubscribe.
     function unsubscribe(uint32 _sourceChainId, address _sourceAddress, bytes32 _eventSig)
-        external
+        external returns (bytes32 subscriptionId)
     {
         Subscription memory subscription =
             Subscription(_sourceChainId, _sourceAddress, msg.sender, _eventSig);
@@ -56,5 +56,7 @@ contract TelepathySubscriber is ISubscriber, TelepathyStorage {
         subscriptions[subscriptionId] = SubscriptionStatus.UNSUBSCIBED;
 
         emit Unsubscribe(subscriptionId, subscription);
+
+        return subscriptionId;
     }
 }

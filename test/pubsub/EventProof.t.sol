@@ -53,7 +53,7 @@ contract EventProofTest is Test, EventProofFixture {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
-            bytes[] memory proof = buildEventProof(fixture);
+            bytes[] memory receiptProof = buildProof(fixture);
 
             (bytes32[] memory eventTopics, bytes memory eventData) = EventProof.parseEvent(
                 proof,
@@ -76,7 +76,7 @@ contract EventProofTest is Test, EventProofFixture {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
-            bytes[] memory proof = buildEventProof(fixture);
+            bytes[] memory receiptProof = buildProof(fixture);
 
             vm.expectRevert("Event was not emitted by source contract");
             EventProof.parseEvent(
@@ -94,7 +94,7 @@ contract EventProofTest is Test, EventProofFixture {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
-            bytes[] memory proof = buildEventProof(fixture);
+            bytes[] memory receiptProof = buildProof(fixture);
 
             vm.expectRevert("Event signature does not match");
             EventProof.parseEvent(

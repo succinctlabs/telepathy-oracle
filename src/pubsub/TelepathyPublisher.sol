@@ -2,8 +2,8 @@ pragma solidity ^0.8.16;
 
 import {Subscription, IPublisher} from "src/pubsub/interfaces/IPubSub.sol";
 import {EventProof} from "src/pubsub/EventProof.sol";
-import {ISubscriptionCallbackReceiver} from
-    "src/pubsub/interfaces/ISubscriptionCallbackReceiver.sol";
+import {ISubscriptionReceiver} from
+    "src/pubsub/interfaces/ISubscriptionReceiver.sol";
 import {TelepathyRouter} from "telepathy-contracts/amb/TelepathyRouter.sol";
 import {SSZ} from "telepathy-contracts/libraries/SimpleSerialize.sol";
 import {Address} from "telepathy-contracts/libraries/Typecast.sol";
@@ -13,7 +13,7 @@ import {PublishStatus} from "src/pubsub/interfaces/IPubSub.sol";
 
 /// @title TelepathyPublisher
 /// @author Succinct Labs
-/// @notice A contract that can publish events to a ISubscriptionCallbackReceiver contract.
+/// @notice A contract that can publish events to a ISubscriptionReceiver contract.
 contract TelepathyPublisher is IPublisher, TelepathyStorage {
     /// @notice Publishes an event emit to a callback Subscriber, given an event proof.
     /// @param srcSlotTxSlotPack The slot where we want to read the header from and the slot where
@@ -113,7 +113,7 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
         bytes memory data;
         {
             bytes memory receiveCall = abi.encodeWithSelector(
-                ISubscriptionCallbackReceiver.handlePublish.selector,
+                ISubscriptionReceiver.handlePublish.selector,
                 subscriptionId,
                 subscription.sourceChainId,
                 subscription.sourceAddress,
@@ -126,7 +126,7 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
         bool implementsHandler = false;
         if (data.length == 32) {
             (bytes4 magic) = abi.decode(data, (bytes4));
-            implementsHandler = magic == ISubscriptionCallbackReceiver.handlePublish.selector;
+            implementsHandler = magic == ISubscriptionReceiver.handlePublish.selector;
         }
 
         if (status && implementsHandler) {
