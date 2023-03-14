@@ -65,6 +65,12 @@ interface ISubscriber {
     function unsubscribe(uint32 sourceChainId, address sourceAddress, bytes32 eventSig) external;
 }
 
+enum PublishStatus {
+    NOT_EXECUTED,
+    EXECUTION_FAILED,
+    EXECUTION_SUCCEEDED
+}
+
 interface IPublisher {
     /// @notice Emitted when an event is published for a given subscription.
     /// @param subscriptionId The unique identifier for the subscription.

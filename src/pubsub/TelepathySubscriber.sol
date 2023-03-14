@@ -2,15 +2,15 @@ pragma solidity ^0.8.16;
 
 import {Subscription, SubscriptionStatus, ISubscriber} from "src/pubsub/interfaces/IPubSub.sol";
 
+import {TelepathyStorage} from "src/pubsub/TelepathyStorage.sol";
+
 /// @title TelepathySubscriber
 /// @author Succinct Labs
 /// @notice This allows contracts to subscribe to cross-chain events from a source contract.
-contract TelepathySubscriber is ISubscriber {
+contract TelepathySubscriber is ISubscriber, TelepathyStorage {
     error SubscriptionAlreadyActive(bytes32 subscriptionId);
     error SubscriptionNotActive(bytes32 subscriptionId);
     error InvalidBlockRange(uint256 startBlock, uint256 endBlock);
-
-    mapping(bytes32 => SubscriptionStatus) public subscriptions;
 
     /// @dev The block ranges use as a signal to off-chain, and are NOT enforced by the publisher.
     ///     If events should only a certain range should be valid, the callbackAddress should do their

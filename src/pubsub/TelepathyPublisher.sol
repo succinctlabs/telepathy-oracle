@@ -7,27 +7,14 @@ import {ISubscriptionCallbackReceiver} from
 import {TelepathyRouter} from "telepathy-contracts/amb/TelepathyRouter.sol";
 import {SSZ} from "telepathy-contracts/libraries/SimpleSerialize.sol";
 import {Address} from "telepathy-contracts/libraries/Typecast.sol";
+import {TelepathyStorage} from "src/pubsub/TelepathyStorage.sol";
 
-enum PublishStatus {
-    NOT_EXECUTED,
-    EXECUTION_FAILED,
-    EXECUTION_SUCCEEDED
-}
-
-// TODO: This (and Oracle Fulfiller) probably should have access control so the router reference can be set again.
+import {PublishStatus} from "src/pubsub/interfaces/IPubSub.sol";
 
 /// @title TelepathyPublisher
 /// @author Succinct Labs
 /// @notice A contract that can publish events to a ISubscriptionCallbackReceiver contract.
-contract TelepathyPublisher is IPublisher {
-    TelepathyRouter telepathyRouter;
-
-    mapping(bytes32 => PublishStatus) public eventsPublished;
-
-    constructor(address _telepathyRouter) {
-        telepathyRouter = TelepathyRouter(_telepathyRouter);
-    }
-
+contract TelepathyPublisher is IPublisher, TelepathyStorage {
     /// @notice Publishes an event emit to a callback Subscriber, given an event proof.
     /// @param srcSlotTxSlotPack The slot where we want to read the header from and the slot where
     ///                          the tx executed, packed as two uint64s.
