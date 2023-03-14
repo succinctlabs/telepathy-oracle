@@ -36,8 +36,9 @@ contract TelepathySubscriberTest is Test {
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
-        bytes32 subscriptionId =
-            telepathySubscriber.subscribe(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG);
+        bytes32 subscriptionId = telepathySubscriber.subscribe(
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+        );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
         );
@@ -51,8 +52,9 @@ contract TelepathySubscriberTest is Test {
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
-        bytes32 subscriptionId =
-            telepathySubscriber.subscribe(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG);
+        bytes32 subscriptionId = telepathySubscriber.subscribe(
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+        );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
         );
@@ -60,7 +62,9 @@ contract TelepathySubscriberTest is Test {
         vm.expectRevert(
             abi.encodeWithSignature("SubscriptionAlreadyActive(bytes32)", subscriptionId)
         );
-        telepathySubscriber.subscribe(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG);
+        telepathySubscriber.subscribe(
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+        );
 
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
@@ -75,8 +79,9 @@ contract TelepathySubscriberTest is Test {
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
-        bytes32 subscriptionId =
-            telepathySubscriber.subscribe(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG);
+        bytes32 subscriptionId = telepathySubscriber.subscribe(
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+        );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
         );
@@ -103,8 +108,9 @@ contract TelepathySubscriberTest is Test {
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
-        bytes32 subscriptionId =
-            telepathySubscriber.subscribe(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG);
+        bytes32 subscriptionId = telepathySubscriber.subscribe(
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+        );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
         );
@@ -139,8 +145,9 @@ contract TelepathySubscriberTest is Test {
             ),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
-        bytes32 subscriptionId =
-            telepathySubscriber.subscribe(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG);
+        bytes32 subscriptionId = telepathySubscriber.subscribe(
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+        );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
         );

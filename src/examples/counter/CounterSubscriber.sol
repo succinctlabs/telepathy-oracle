@@ -46,9 +46,14 @@ contract CounterSubscriber is TelepathyHandler {
         EVENT_SOURCE_ADDRESS = _sourceAddress;
     }
 
-    function subscribeToEvent(uint32 _sourceChainId, address _sourceAddress) external {
-        subscriptionId =
-            telepathySubscriber.subscribe(_sourceChainId, _sourceAddress, address(this), EVENT_SIG);
+    function subscribeToEvent(
+        uint32 _sourceChainId,
+        address _sourceAddress,
+        uint32 startTimeToListen
+    ) external {
+        subscriptionId = telepathySubscriber.subscribe(
+            _sourceChainId, _sourceAddress, address(this), EVENT_SIG, 0, 0
+        );
     }
 
     function unsubscribeFromEvent(uint32 _sourceChainId, address _sourceAddress) external {
