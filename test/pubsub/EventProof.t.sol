@@ -16,7 +16,7 @@ import {MerkleTrie} from "optimism-bedrock-contracts/trie/MerkleTrie.sol";
 
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-import {EventLog, EventProof} from "src/pubsub/EventProof.sol";
+import {EventProof} from "src/pubsub/EventProof.sol";
 import {EventProofFixture} from "test/pubsub/EventProofFixture.sol";
 
 contract EventProofTest is Test, EventProofFixture {
@@ -49,74 +49,61 @@ contract EventProofTest is Test, EventProofFixture {
         require(fixtures.length > 0, "no fixtures found");
     }
 
-    function test_VerifyEvent() public view {
+    function test_VerifyEvent() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
             bytes[] memory proof = buildEventProof(fixture);
 
-            EventLog memory log = EventLog(fixture.logSource, fixture.logTopics, fixture.logData);
-
-            EventProof.verifyEvent(
-                proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
+            (bytes32[] memory eventTopics, bytes memory eventData) = EventProof.parseEvent(
+                proof,
+                fixture.receiptsRoot,
+                vm.parseBytes(fixture.key),
+                fixture.logIndex,
+                fixture.logSource,
+                fixture.logTopics[0]
             );
+
+            assertEq(eventTopics.length, fixture.logTopics.length);
+            for (uint256 i = 0; i < eventTopics.length; i++) {
+                assertEq(eventTopics[i], fixture.logTopics[i]);
+            }
+            assertEq(eventData, fixture.logData);
         }
     }
 
-    function test_VerifyEventRevert_WhenEventLogSourceInvalid() public {
+    function test_VerifyEventRevert_WhenEventSourceInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
             bytes[] memory proof = buildEventProof(fixture);
 
-            EventLog memory log = EventLog(address(0), fixture.logTopics, fixture.logData);
             vm.expectRevert("Event was not emitted by source contract");
-            EventProof.verifyEvent(
-                proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
+            EventProof.parseEvent(
+                proof,
+                fixture.receiptsRoot,
+                vm.parseBytes(fixture.key),
+                fixture.logIndex,
+                makeAddr("bad"),
+                fixture.logTopics[0]
             );
         }
     }
 
-    function test_VerifyEventRevert_WhenEventLogTopicsLengthInvalid() public {
+    function test_VerifyEventRevert_WhenEventSigInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
             bytes[] memory proof = buildEventProof(fixture);
 
-            bytes32[] memory badTopics = new bytes32[](fixture.logTopics.length-1);
-            EventLog memory log = EventLog(fixture.logSource, badTopics, fixture.logData);
-            vm.expectRevert("Event topic length does not match");
-            EventProof.verifyEvent(
-                proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
-            );
-        }
-    }
-
-    function test_VerifyEventRevert_WhenEventLogTopicsInvalid() public {
-        for (uint256 i = 0; i < fixtures.length; i++) {
-            Fixture memory fixture = fixtures[i];
-
-            bytes[] memory proof = buildEventProof(fixture);
-            bytes32[] memory badTopics = new bytes32[](fixture.logTopics.length);
-            EventLog memory log = EventLog(fixture.logSource, badTopics, fixture.logData);
-            vm.expectRevert("Event topic does not match");
-            EventProof.verifyEvent(
-                proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
-            );
-        }
-    }
-
-    function test_VerifyEventRevert_WhenEventLogDataInvalid() public {
-        for (uint256 i = 0; i < fixtures.length; i++) {
-            Fixture memory fixture = fixtures[i];
-
-            bytes[] memory proof = buildEventProof(fixture);
-
-            bytes memory badData = "bad data";
-            EventLog memory log = EventLog(fixture.logSource, fixture.logTopics, badData);
-            vm.expectRevert("Event data does not match");
-            EventProof.verifyEvent(
-                proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
+            vm.expectRevert("Event signature does not match");
+            EventProof.parseEvent(
+                proof,
+                fixture.receiptsRoot,
+                vm.parseBytes(fixture.key),
+                fixture.logIndex,
+                fixture.logSource,
+                keccak256("Incremented(uint256)")
             );
         }
     }

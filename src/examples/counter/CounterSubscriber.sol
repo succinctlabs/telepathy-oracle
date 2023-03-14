@@ -34,13 +34,6 @@ contract CounterSubscriber is ISubscriptionCallbackReceiver {
 
     bytes32 subscriptionId;
 
-    // function handlePublish(
-    //     bytes32 subscriptionId,
-    //     uint32 sourceChainId,
-    //     address sourceAddress,
-    //     EventLog memory log
-    // ) external;
-
     constructor(address _telepathySubscriber, uint32 _sourceChainId, address _sourceAddress) {
         telepathySubscriber = ISubscriber(_telepathySubscriber);
         EVENT_SOURCE_CHAIN_ID = _sourceChainId;

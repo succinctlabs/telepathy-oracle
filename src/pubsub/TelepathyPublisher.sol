@@ -1,7 +1,7 @@
 pragma solidity ^0.8.16;
 
 import {Subscription, IPublisher} from "src/pubsub/interfaces/IPubSub.sol";
-import {EventLog, EventProof} from "src/pubsub/EventProof.sol";
+import {EventProof} from "src/pubsub/EventProof.sol";
 import {ISubscriptionCallbackReceiver} from
     "src/pubsub/interfaces/ISubscriptionCallbackReceiver.sol";
 import {TelepathyRouter} from "telepathy-contracts/amb/TelepathyRouter.sol";
@@ -22,7 +22,6 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
     /// @param receiptsRoot The receipts root which contains the event.
     /// @param txIndexRLPEncoded The index of our transaction inside the block RLP encoded.
     /// @param logIndex The index of the event in our transaction.
-    /// @param eventLog The event log in the form: [address, topics, data].
     /// @param subscription The subscription data (sourceChainId, sourceAddress, callbackAddress, eventSig).
     /// @dev This function should be called for every subscriber that is subscribed to the event.
     function publishEvent(
@@ -32,15 +31,17 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
         bytes[] calldata receiptProof,
         bytes memory txIndexRLPEncoded,
         uint256 logIndex,
-        EventLog calldata eventLog,
         Subscription calldata subscription
     ) external {
         requireLightClientConsistency(subscription.sourceChainId);
         requireNotFrozen(subscription.sourceChainId);
 
         // Ensure the event emit may only be published to a subscriber once
-        bytes32 publishKey =
-            keccak256(abi.encode(receiptsRoot, txIndexRLPEncoded, logIndex, keccak256(abi.encode(subscription))));
+        bytes32 publishKey = keccak256(
+            abi.encode(
+                receiptsRoot, txIndexRLPEncoded, logIndex, keccak256(abi.encode(subscription))
+            )
+        );
         require(
             eventsPublished[publishKey] == PublishStatus.NOT_EXECUTED, "Event already published"
         );
@@ -56,13 +57,18 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
             require(isValid, "Invalid receipts root proof");
         }
 
-        {
-            EventProof.verifyEvent(
-                receiptProof, receiptsRoot, txIndexRLPEncoded, logIndex, eventLog
-            );
-        }
+        (bytes32[] memory eventTopics, bytes memory eventData) = EventProof.parseEvent(
+            receiptProof,
+            receiptsRoot,
+            txIndexRLPEncoded,
+            logIndex,
+            subscription.sourceAddress,
+            subscription.eventSig
+        );
 
-        _publish(keccak256(abi.encode(subscription)), subscription, publishKey, eventLog);
+        _publish(
+            keccak256(abi.encode(subscription)), subscription, publishKey, eventTopics, eventData
+        );
     }
 
     /// @notice Checks that the light client for a given chainId is consistent.
@@ -100,7 +106,8 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
         bytes32 subscriptionId,
         Subscription calldata subscription,
         bytes32 publishKey,
-        EventLog calldata eventLog
+        bytes32[] memory eventTopics,
+        bytes memory eventData
     ) internal {
         bool status;
         bytes memory data;
@@ -110,7 +117,8 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
                 subscriptionId,
                 subscription.sourceChainId,
                 subscription.sourceAddress,
-                eventLog
+                eventTopics,
+                eventData
             );
             (status, data) = subscription.callbackAddress.call(receiveCall);
         }

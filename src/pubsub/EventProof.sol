@@ -1,6 +1,5 @@
 pragma solidity ^0.8.16;
 
-import {EventLog} from "src/pubsub/interfaces/IPubSub.sol";
 import {RLPReader} from "optimism-bedrock-contracts/rlp/RLPReader.sol";
 import {RLPWriter} from "optimism-bedrock-contracts/rlp/RLPWriter.sol";
 import {MerkleTrie} from "optimism-bedrock-contracts/trie/MerkleTrie.sol";
@@ -10,14 +9,15 @@ library EventProof {
     using RLPReader for bytes;
 
     /// @notice Verifies that the given log data is valid for the given event proof.
-    function verifyEvent(
-        bytes[] memory proof,
+    function parseEvent(
+        bytes[] memory receiptProof,
         bytes32 receiptRoot,
-        bytes memory key,
+        bytes memory txIndexRLPEncoded,
         uint256 logIndex,
-        EventLog memory eventLog
-    ) internal pure {
-        bytes memory value = MerkleTrie.get(key, proof, receiptRoot);
+        address sourceAddress,
+        bytes32 eventSig
+    ) internal pure returns (bytes32[] memory, bytes memory) {
+        bytes memory value = MerkleTrie.get(txIndexRLPEncoded, receiptProof, receiptRoot);
         bytes1 txTypeOrFirstByte = value[0];
 
         // Currently, there are three possible transaction types on Ethereum. Receipts either come
@@ -57,19 +57,26 @@ library EventProof {
 
         // Validate that the correct contract emitted the event
         address sourceContract = relevantLog[0].readAddress();
-        require(sourceContract == eventLog.source, "Event was not emitted by source contract");
+        require(sourceContract == sourceAddress, "Event was not emitted by source contract");
 
-        // Validate that the correct topics were emitted
-        RLPReader.RLPItem[] memory topics = relevantLog[1].readList();
-        require(topics.length == eventLog.topics.length, "Event topic length does not match");
-        for (uint256 i = 0; i < topics.length; i++) {
-            require(
-                bytes32(topics[i].readUint256()) == eventLog.topics[i], "Event topic does not match"
-            );
-        }
+        // Validate that the event signature matches
+        bytes32[] memory topics = parseTopics(relevantLog[1].readList());
+        require(bytes32(topics[0]) == eventSig, "Event signature does not match");
 
-        // Validate that the correct data was emitted
         bytes memory data = relevantLog[2].readBytes();
-        require(data.length == eventLog.data.length, "Event data does not match");
+
+        return (topics, data);
+    }
+
+    function parseTopics(RLPReader.RLPItem[] memory topicsList)
+        private
+        pure
+        returns (bytes32[] memory)
+    {
+        bytes32[] memory topics = new bytes32[](topicsList.length);
+        for (uint256 i = 0; i < topicsList.length; i++) {
+            topics[i] = bytes32(topicsList[i].readUint256());
+        }
+        return topics;
     }
 }

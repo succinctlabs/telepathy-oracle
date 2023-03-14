@@ -14,7 +14,7 @@ import {TelepathyRouter} from "telepathy-contracts/amb/TelepathyRouter.sol";
 /// @author Succinct Labs
 /// @notice This allows an on-chain Publisher-Suscriber model to be used for events. Contracts can subscribe to
 ///         events emitted from a source contract, and it will be relayed these events through the publisher. Before
-///         the events are relayed, they are verified using the Telepathy Light Client for proof of consensus on the 
+///         the events are relayed, they are verified using the Telepathy Light Client for proof of consensus on the
 ///         source chain.
 contract TelepathyPubSub is TelepathyPublisher, TelepathySubscriber {
     uint8 public constant VERSION = 1;

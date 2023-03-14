@@ -93,7 +93,6 @@ interface IPublisher {
         bytes[] calldata receiptProof,
         bytes memory txIndexRLPEncoded,
         uint256 logIndex,
-        EventLog calldata eventLog,
         Subscription calldata subscription
     ) external;
 }
