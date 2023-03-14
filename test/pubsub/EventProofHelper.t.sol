@@ -16,7 +16,7 @@ import {MerkleTrie} from "optimism-bedrock-contracts/trie/MerkleTrie.sol";
 
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-import {Log, EventProof} from "src/pubsub/EventProofHelper.sol";
+import {EventLog, EventProof} from "src/pubsub/EventProofHelper.sol";
 import {EventProofFixture} from "test/pubsub/EventProofFixture.sol";
 
 contract EventProofHelperTest is Test, EventProofFixture {
@@ -55,7 +55,7 @@ contract EventProofHelperTest is Test, EventProofFixture {
 
             bytes[] memory proof = buildEventProof(fixture);
 
-            Log memory log = Log(fixture.logSource, fixture.logTopics, fixture.logData);
+            EventLog memory log = EventLog(fixture.logSource, fixture.logTopics, fixture.logData);
 
             EventProof.verifyEvent(
                 proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
@@ -63,13 +63,13 @@ contract EventProofHelperTest is Test, EventProofFixture {
         }
     }
 
-    function test_VerifyEvent_WhenLogSourceInvalid() public {
+    function test_VerifyEvent_WhenEventLogSourceInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
             bytes[] memory proof = buildEventProof(fixture);
 
-            Log memory log = Log(address(0), fixture.logTopics, fixture.logData);
+            EventLog memory log = EventLog(address(0), fixture.logTopics, fixture.logData);
             vm.expectRevert("Event was not emitted by source contract");
             EventProof.verifyEvent(
                 proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
@@ -77,14 +77,14 @@ contract EventProofHelperTest is Test, EventProofFixture {
         }
     }
 
-    function test_VerifyEvent_WhenLogTopicsLengthInvalid() public {
+    function test_VerifyEvent_WhenEventLogTopicsLengthInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
             bytes[] memory proof = buildEventProof(fixture);
 
             bytes32[] memory badTopics = new bytes32[](fixture.logTopics.length-1);
-            Log memory log = Log(fixture.logSource, badTopics, fixture.logData);
+            EventLog memory log = EventLog(fixture.logSource, badTopics, fixture.logData);
             vm.expectRevert("Event topic length does not match");
             EventProof.verifyEvent(
                 proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
@@ -92,13 +92,13 @@ contract EventProofHelperTest is Test, EventProofFixture {
         }
     }
 
-    function test_VerifyEvent_WhenLogTopicsInvalid() public {
+    function test_VerifyEvent_WhenEventLogTopicsInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
             bytes[] memory proof = buildEventProof(fixture);
             bytes32[] memory badTopics = new bytes32[](fixture.logTopics.length);
-            Log memory log = Log(fixture.logSource, badTopics, fixture.logData);
+            EventLog memory log = EventLog(fixture.logSource, badTopics, fixture.logData);
             vm.expectRevert("Event topic does not match");
             EventProof.verifyEvent(
                 proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log
@@ -106,14 +106,14 @@ contract EventProofHelperTest is Test, EventProofFixture {
         }
     }
 
-    function test_VerifyEvent_WhenLogDataInvalid() public {
+    function test_VerifyEvent_WhenEventLogDataInvalid() public {
         for (uint256 i = 0; i < fixtures.length; i++) {
             Fixture memory fixture = fixtures[i];
 
             bytes[] memory proof = buildEventProof(fixture);
 
             bytes memory badData = "bad data";
-            Log memory log = Log(fixture.logSource, fixture.logTopics, badData);
+            EventLog memory log = EventLog(fixture.logSource, fixture.logTopics, badData);
             vm.expectRevert("Event data does not match");
             EventProof.verifyEvent(
                 proof, fixture.receiptsRoot, vm.parseBytes(fixture.key), fixture.logIndex, log

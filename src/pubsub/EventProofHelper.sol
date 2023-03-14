@@ -1,20 +1,9 @@
 pragma solidity ^0.8.16;
 
+import {EventLog} from "src/pubsub/interfaces/IPubSub.sol";
 import {RLPReader} from "optimism-bedrock-contracts/rlp/RLPReader.sol";
 import {RLPWriter} from "optimism-bedrock-contracts/rlp/RLPWriter.sol";
 import {MerkleTrie} from "optimism-bedrock-contracts/trie/MerkleTrie.sol";
-
-/// @param source The address of the contract that emitted the log.
-/// @param topics The topics associated with the log, length changes with # of indexed fields.
-/// @param data The data associated with the log.
-/// @dev For easy off-chain usage, this is equivalant to:
-///     https://github.com/ethereumjs/ethereumjs-monorepo/blob/2e1826e4a14fda708857f7d3243c2b897e4a10fa/packages/evm/src/types.ts#L234
-///     export type Log = [address: Buffer, topics: Buffer[], data: Buffer]
-struct Log {
-    address source;
-    bytes32[] topics;
-    bytes data;
-}
 
 library EventProof {
     using RLPReader for RLPReader.RLPItem;
@@ -26,7 +15,7 @@ library EventProof {
         bytes32 receiptRoot,
         bytes memory key,
         uint256 logIndex,
-        Log memory log
+        EventLog memory eventLog
     ) internal pure {
         bytes memory value = MerkleTrie.get(key, proof, receiptRoot);
         bytes1 txTypeOrFirstByte = value[0];
@@ -68,17 +57,19 @@ library EventProof {
 
         // Validate that the correct contract emitted the event
         address sourceContract = relevantLog[0].readAddress();
-        require(sourceContract == log.source, "Event was not emitted by source contract");
+        require(sourceContract == eventLog.source, "Event was not emitted by source contract");
 
         // Validate that the correct topics were emitted
         RLPReader.RLPItem[] memory topics = relevantLog[1].readList();
-        require(topics.length == log.topics.length, "Event topic length does not match");
+        require(topics.length == eventLog.topics.length, "Event topic length does not match");
         for (uint256 i = 0; i < topics.length; i++) {
-            require(bytes32(topics[i].readUint256()) == log.topics[i], "Event topic does not match");
+            require(
+                bytes32(topics[i].readUint256()) == eventLog.topics[i], "Event topic does not match"
+            );
         }
 
         // Validate that the correct data was emitted
         bytes memory data = relevantLog[2].readBytes();
-        require(data.length == log.data.length, "Event data does not match");
+        require(data.length == eventLog.data.length, "Event data does not match");
     }
 }

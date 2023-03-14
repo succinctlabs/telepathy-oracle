@@ -1,10 +1,10 @@
 pragma solidity ^0.8.16;
 
-import {Subscription} from "src/pubsub/TelepathySubscriber.sol";
-import {Log, EventProof} from "src/pubsub/EventProofHelper.sol";
-
+import {Subscription, IPublisher} from "src/pubsub/interfaces/IPubSub.sol";
+import {EventLog, EventProof} from "src/pubsub/EventProofHelper.sol";
+import {ISubscriptionCallbackReceiver} from
+    "src/pubsub/interfaces/ISubscriptionCallbackReceiver.sol";
 import {TelepathyRouter} from "telepathy-contracts/amb/TelepathyRouter.sol";
-import {ITelepathyHandler} from "telepathy-contracts/amb/interfaces/TelepathyHandler.sol";
 import {SSZ} from "telepathy-contracts/libraries/SimpleSerialize.sol";
 import {Address} from "telepathy-contracts/libraries/Typecast.sol";
 
@@ -18,16 +18,8 @@ enum PublishStatus {
 
 /// @title TelepathyPublisher
 /// @author Succinct Labs
-/// @notice A contract that can publish events to a TelepathySubscriber contract.
-contract TelepathyPublisher {
-    event Publish(
-        bytes32 indexed subscriptionId,
-        uint32 indexed sourceChainId,
-        address indexed sourceAddress,
-        address callbackAddress,
-        bool success
-    );
-
+/// @notice A contract that can publish events to a ISubscriptionCallbackReceiver contract.
+contract TelepathyPublisher is IPublisher {
     TelepathyRouter telepathyRouter;
 
     mapping(bytes32 => PublishStatus) public eventsPublished;
@@ -43,7 +35,7 @@ contract TelepathyPublisher {
     /// @param receiptsRoot The receipts root which contains the event.
     /// @param txIndexRLPEncoded The index of our transaction inside the block RLP encoded.
     /// @param logIndex The index of the event in our transaction.
-    /// @param log The event log in the form: [address, topics, data].
+    /// @param eventLog The event log in the form: [address, topics, data].
     /// @param subscription The subscription data (sourceChainId, sourceAddress, callbackAddress, eventSig).
     /// @dev This function should be called for every subscriber that is subscribed to the event.
     function publishEvent(
@@ -53,7 +45,7 @@ contract TelepathyPublisher {
         bytes[] calldata receiptProof,
         bytes memory txIndexRLPEncoded,
         uint256 logIndex,
-        Log calldata log,
+        EventLog calldata eventLog,
         Subscription calldata subscription
     ) external {
         requireLightClientConsistency(subscription.sourceChainId);
@@ -78,10 +70,12 @@ contract TelepathyPublisher {
         }
 
         {
-            EventProof.verifyEvent(receiptProof, receiptsRoot, txIndexRLPEncoded, logIndex, log);
+            EventProof.verifyEvent(
+                receiptProof, receiptsRoot, txIndexRLPEncoded, logIndex, eventLog
+            );
         }
 
-        _publish(subscription, publishKey, log);
+        _publish(subscription, publishKey, eventLog);
     }
 
     /// @notice Checks that the light client for a given chainId is consistent.
@@ -115,20 +109,23 @@ contract TelepathyPublisher {
     }
 
     /// @notice Executes the callback function on the subscriber, and marks the event publish as successful or failed.
-    function _publish(Subscription calldata subscription, bytes32 eventKey, Log calldata log)
-        internal
-    {
+    function _publish(
+        Subscription calldata subscription,
+        bytes32 eventKey,
+        EventLog calldata eventLog
+    ) internal {
         bytes32 subscriptionId = keccak256(abi.encode(subscription));
-        bytes memory encodedData = abi.encode(subscriptionId, log);
+        bytes memory encodedData = abi.encode(subscriptionId, eventLog);
 
         bool status;
         bytes memory data;
         {
             bytes memory receiveCall = abi.encodeWithSelector(
-                ITelepathyHandler.handleTelepathy.selector,
+                ISubscriptionCallbackReceiver.handlePublish.selector,
+                subscriptionId,
                 subscription.sourceChainId,
                 subscription.sourceAddress,
-                encodedData
+                eventLog
             );
             (status, data) = subscription.callbackAddress.call(receiveCall);
         }
@@ -136,7 +133,7 @@ contract TelepathyPublisher {
         bool implementsHandler = false;
         if (data.length == 32) {
             (bytes4 magic) = abi.decode(data, (bytes4));
-            implementsHandler = magic == ITelepathyHandler.handleTelepathy.selector;
+            implementsHandler = magic == ISubscriptionCallbackReceiver.handlePublish.selector;
         }
 
         if (status && implementsHandler) {
