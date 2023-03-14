@@ -15,7 +15,7 @@ contract EventProofFixture is CommonBase {
         bytes32 receiptsRoot;
     }
 
-    function buildEventProof(Fixture memory fixture) internal pure returns (bytes[] memory) {
+    function buildProof(Fixture memory fixture) internal pure returns (bytes[] memory) {
         bytes[] memory proof = new bytes[](3);
         proof[0] = vm.parseBytes(fixture.proof[0]);
         proof[1] = vm.parseBytes(fixture.proof[1]);

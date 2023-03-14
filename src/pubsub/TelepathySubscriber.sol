@@ -44,7 +44,8 @@ contract TelepathySubscriber is ISubscriber, TelepathyStorage {
 
     /// @dev Only the original callbackAddress contract will be able to unsubscribe.
     function unsubscribe(uint32 _sourceChainId, address _sourceAddress, bytes32 _eventSig)
-        external returns (bytes32 subscriptionId)
+        external
+        returns (bytes32)
     {
         Subscription memory subscription =
             Subscription(_sourceChainId, _sourceAddress, msg.sender, _eventSig);

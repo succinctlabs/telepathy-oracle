@@ -49,7 +49,9 @@ interface ISubscriber {
         uint256 endBlock
     ) external returns (bytes32 subscriptionId);
 
-    function unsubscribe(uint32 sourceChainId, address sourceAddress, bytes32 eventSig) external;
+    function unsubscribe(uint32 sourceChainId, address sourceAddress, bytes32 eventSig)
+        external
+        returns (bytes32 subscriptionId);
 }
 
 enum PublishStatus {

@@ -2,8 +2,7 @@ pragma solidity ^0.8.16;
 
 import {Subscription, IPublisher} from "src/pubsub/interfaces/IPubSub.sol";
 import {EventProof} from "src/pubsub/EventProof.sol";
-import {ISubscriptionReceiver} from
-    "src/pubsub/interfaces/ISubscriptionReceiver.sol";
+import {ISubscriptionReceiver} from "src/pubsub/interfaces/ISubscriptionReceiver.sol";
 import {TelepathyRouter} from "telepathy-contracts/amb/TelepathyRouter.sol";
 import {SSZ} from "telepathy-contracts/libraries/SimpleSerialize.sol";
 import {Address} from "telepathy-contracts/libraries/Typecast.sol";

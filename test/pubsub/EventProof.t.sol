@@ -56,7 +56,7 @@ contract EventProofTest is Test, EventProofFixture {
             bytes[] memory receiptProof = buildProof(fixture);
 
             (bytes32[] memory eventTopics, bytes memory eventData) = EventProof.parseEvent(
-                proof,
+                receiptProof,
                 fixture.receiptsRoot,
                 vm.parseBytes(fixture.key),
                 fixture.logIndex,
@@ -65,8 +65,8 @@ contract EventProofTest is Test, EventProofFixture {
             );
 
             assertEq(eventTopics.length, fixture.logTopics.length);
-            for (uint256 i = 0; i < eventTopics.length; i++) {
-                assertEq(eventTopics[i], fixture.logTopics[i]);
+            for (uint256 j = 0; j < eventTopics.length; j++) {
+                assertEq(eventTopics[j], fixture.logTopics[j]);
             }
             assertEq(eventData, fixture.logData);
         }
@@ -80,7 +80,7 @@ contract EventProofTest is Test, EventProofFixture {
 
             vm.expectRevert("Event was not emitted by source contract");
             EventProof.parseEvent(
-                proof,
+                receiptProof,
                 fixture.receiptsRoot,
                 vm.parseBytes(fixture.key),
                 fixture.logIndex,
@@ -98,7 +98,7 @@ contract EventProofTest is Test, EventProofFixture {
 
             vm.expectRevert("Event signature does not match");
             EventProof.parseEvent(
-                proof,
+                receiptProof,
                 fixture.receiptsRoot,
                 vm.parseBytes(fixture.key),
                 fixture.logIndex,

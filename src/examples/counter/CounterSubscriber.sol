@@ -1,9 +1,7 @@
 pragma solidity ^0.8.16;
 
-import {ISubscriber, Subscription, EventLog} from "src/pubsub/interfaces/IPubSub.sol";
-
-import {SubscriptionReceiver} from
-    "src/pubsub/interfaces/SubscriptionReceiver.sol";
+import {TelepathyPubSub} from "src/pubsub/TelepathyPubSub.sol";
+import {SubscriptionReceiver} from "src/pubsub/interfaces/SubscriptionReceiver.sol";
 
 /// @notice Example counter deployed on the source chain to listen to.
 /// @dev Importantly, this contract does not need any special logic to handle it's events being subscribed to.
@@ -24,7 +22,7 @@ contract Counter {
     }
 }
 
-/// @notice This contract is used to subscribe to a cross-chain events from a source Counter on a different chain. 
+/// @notice This contract is used to subscribe to a cross-chain events from a source Counter on a different chain.
 ///     It demonstrates how you can handle multiple event emits from a single source contract you're subscribed to.
 /// @dev You could also maintain a list of multiple Counter contracts across multiple chains.
 contract CounterSubscriber is SubscriptionReceiver {
@@ -44,32 +42,36 @@ contract CounterSubscriber is SubscriptionReceiver {
 
     mapping(bytes32 => bool) activeSubscriptions;
 
-    constructor(address _telepathyPubSub) TelepathyHandler(_telepathyPubSub) {
+    constructor(address _telepathyPubSub, uint32 _sourceChainId, address _sourceAddress)
+        SubscriptionReceiver(_telepathyPubSub)
+    {
         EVENT_SOURCE_CHAIN_ID = _sourceChainId;
         EVENT_SOURCE_ADDRESS = _sourceAddress;
     }
 
     function subscribeToIncEvent(uint32 _sourceChainId, address _sourceAddress) external {
-        bytes32 subscriptionId = telepathySubscriber.subscribe(
+        bytes32 subscriptionId = telepathyPubSub.subscribe(
             _sourceChainId, _sourceAddress, address(this), INCREMENT_EVENT_SIG, 0, 0
         );
         activeSubscriptions[subscriptionId] = true;
     }
 
     function unsubscribeFromIncEvent(uint32 _sourceChainId, address _sourceAddress) external {
-        bytes32 subscriptionId = telepathySubscriber.unsubscribe(_sourceChainId, _sourceAddress, INCREMENT_EVENT_SIG);
+        bytes32 subscriptionId =
+            telepathyPubSub.unsubscribe(_sourceChainId, _sourceAddress, INCREMENT_EVENT_SIG);
         activeSubscriptions[subscriptionId] = false;
     }
 
     function subscribeToDecEvent(uint32 _sourceChainId, address _sourceAddress) external {
-        bytes32 subscriptionId = telepathySubscriber.subscribe(
+        bytes32 subscriptionId = telepathyPubSub.subscribe(
             _sourceChainId, _sourceAddress, address(this), DECREMENT_EVENT_SIG, 0, 0
         );
         activeSubscriptions[subscriptionId] = true;
     }
 
     function unsubscribeFromDecEvent(uint32 _sourceChainId, address _sourceAddress) external {
-        bytes32 subscriptionId = telepathySubscriber.unsubscribe(_sourceChainId, _sourceAddress, DECREMENT_EVENT_SIG);
+        bytes32 subscriptionId =
+            telepathyPubSub.unsubscribe(_sourceChainId, _sourceAddress, DECREMENT_EVENT_SIG);
         activeSubscriptions[subscriptionId] = false;
     }
 
@@ -92,11 +94,11 @@ contract CounterSubscriber is SubscriptionReceiver {
             revert InvalidSubscriptionId(_subscriptionId);
         }
 
-        // Implement arbitrary logic to handle the publish. 
+        // Implement arbitrary logic to handle the publish.
         // In this case, we are just emitting our own event in response to the source Counter.
 
         bytes32 eventSig = eventTopics[0];
-        uint256 count = eventTopics[1];
+        uint256 count = uint256(eventTopics[1]);
         if (eventSig == INCREMENT_EVENT_SIG) {
             emit CrossChainIncremented(count, abi.decode(eventdata, (address)));
         } else if (eventSig == DECREMENT_EVENT_SIG) {
