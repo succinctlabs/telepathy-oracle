@@ -13,8 +13,8 @@ import {TelepathyHandler} from "telepathy-contracts/amb/interfaces/TelepathyHand
 contract TelepathySubscriberTest is Test {
     event Subscribe(
         bytes32 indexed subscriptionId,
-        uint256 indexed startBlock,
-        uint256 indexed endBlock,
+        uint64 indexed startSlot,
+        uint64 indexed endSlot,
         Subscription subscription
     );
     event Unsubscribe(bytes32 indexed subscriptionId, Subscription Subscription);
@@ -39,12 +39,12 @@ contract TelepathySubscriberTest is Test {
             keccak256(
                 abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
-            0,
-            0,
+            uint64(0),
+            uint64(0),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
         bytes32 subscriptionId = telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, uint64(0), uint64(0)
         );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
@@ -57,12 +57,12 @@ contract TelepathySubscriberTest is Test {
             keccak256(
                 abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
-            16000000,
-            17000000,
+            uint64(6000000),
+            uint64(7000000),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
         bytes32 subscriptionId = telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 16000000, 17000000
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, uint64(6000000), 7000000
         );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
@@ -75,12 +75,12 @@ contract TelepathySubscriberTest is Test {
             keccak256(
                 abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
-            0,
-            17000000,
+            uint64(0),
+            uint64(7000000),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
         bytes32 subscriptionId = telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 17000000
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, uint64(0), 7000000
         );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
@@ -88,18 +88,27 @@ contract TelepathySubscriberTest is Test {
     }
 
     function test_SubscribeRevert_WhenOnlyStartBlockSet() public {
-        vm.expectRevert(abi.encodeWithSignature("InvalidBlockRange(uint256,uint256)", 16000000, 0));
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidSlotRange(uint64,uint64)", uint64(6000000), uint64(0))
+        );
         telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 16000000, 0
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, uint64(6000000), uint64(0)
         );
     }
 
     function test_SubscribeRevert_WhenOnlyEndBlockLowerThanStartBlock() public {
         vm.expectRevert(
-            abi.encodeWithSignature("InvalidBlockRange(uint256,uint256)", 16000000, 15000000)
+            abi.encodeWithSignature(
+                "InvalidSlotRange(uint64,uint64)", uint64(6000000), uint64(5000000)
+            )
         );
         telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 16000000, 15000000
+            SOURCE_CHAIN,
+            SOURCE_ADDRESS,
+            CALLBACK_ADDRESS,
+            EVENT_SIG,
+            uint64(6000000),
+            uint64(5000000)
         );
     }
 
@@ -109,12 +118,12 @@ contract TelepathySubscriberTest is Test {
             keccak256(
                 abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
-            0,
-            0,
+            uint64(0),
+            uint64(0),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
         bytes32 subscriptionId = telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, uint64(0), uint64(0)
         );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
@@ -124,7 +133,7 @@ contract TelepathySubscriberTest is Test {
             abi.encodeWithSignature("SubscriptionAlreadyActive(bytes32)", subscriptionId)
         );
         telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, uint64(0), uint64(0)
         );
 
         assertTrue(
@@ -138,12 +147,12 @@ contract TelepathySubscriberTest is Test {
             keccak256(
                 abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
-            0,
-            0,
+            uint64(0),
+            uint64(0),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
         bytes32 subscriptionId = telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, uint64(0), uint64(0)
         );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
@@ -169,12 +178,12 @@ contract TelepathySubscriberTest is Test {
             keccak256(
                 abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
-            0,
-            0,
+            uint64(0),
+            uint64(0),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
         bytes32 subscriptionId = telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, uint64(0), uint64(0)
         );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED
@@ -208,12 +217,12 @@ contract TelepathySubscriberTest is Test {
             keccak256(
                 abi.encode(Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG))
             ),
-            0,
-            0,
+            uint64(0),
+            uint64(0),
             Subscription(SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG)
         );
         bytes32 subscriptionId = telepathySubscriber.subscribe(
-            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, 0, 0
+            SOURCE_CHAIN, SOURCE_ADDRESS, CALLBACK_ADDRESS, EVENT_SIG, uint64(0), uint64(0)
         );
         assertTrue(
             telepathySubscriber.subscriptions(subscriptionId) == SubscriptionStatus.SUBSCRIBED

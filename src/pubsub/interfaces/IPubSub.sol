@@ -12,8 +12,10 @@ enum SubscriptionStatus {
 /// @param callbackAddress The address of the contract which will receive the event data. MUST be implement
 ///     the ISubscriptionCallbackReceiver interface.
 /// @param eventSig The signature of the event to listen for.
-/// @dev A subscription with will still be active even if the endBlock has passed. To renew a subscription
-///     with different block ranges, unsubscribe and re-subscribe.
+/// @dev A subscription will still be active even if the endSlot has passed. To renew a subscription
+///     with different slot ranges, unsubscribe and re-subscribe. The reason slot ranges are not included
+///     in this struct is because they shouldn't influence the subscriptionId -- otherwise a subscriber could
+///     have overlapping subscriptions on the same event.
 struct Subscription {
     uint32 sourceChainId;
     address sourceAddress;
@@ -24,14 +26,14 @@ struct Subscription {
 interface ISubscriber {
     /// @notice Emitted when a new subscription is created.
     /// @param subscriptionId The unique identifier for the subscription.
-    /// @param startBlock The block number to start listening for events, 0 for all blocks.
-    /// @param endBlock The block number to stop listening for events, 0 for infinite.
+    /// @param startSlot The Beacon Chain slot to start listening for events, 0 for all slots up to endSlot.
+    /// @param endSlot The Beacon Chain slot to stop listening for events, 0 for no limit.
     /// @param subscription The subscription details.
-    /// @dev The startBlock and endBlock are inclusive.
+    /// @dev The startSlot and endSlot are inclusive.
     event Subscribe(
         bytes32 indexed subscriptionId,
-        uint256 indexed startBlock,
-        uint256 indexed endBlock,
+        uint64 indexed startSlot,
+        uint64 indexed endSlot,
         Subscription subscription
     );
 
@@ -45,8 +47,8 @@ interface ISubscriber {
         address sourceAddress,
         address callbackAddress,
         bytes32 eventSig,
-        uint256 startBlock,
-        uint256 endBlock
+        uint64 startSlot,
+        uint64 endSlot
     ) external returns (bytes32 subscriptionId);
 
     function unsubscribe(uint32 sourceChainId, address sourceAddress, bytes32 eventSig)

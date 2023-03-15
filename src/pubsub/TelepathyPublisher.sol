@@ -36,25 +36,21 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
         requireNotFrozen(subscription.sourceChainId);
 
         // Ensure the event emit may only be published to a subscriber once
-        bytes32 publishKey = keccak256(
-            abi.encode(
-                receiptsRoot, txIndexRLPEncoded, logIndex, keccak256(abi.encode(subscription))
-            )
-        );
+        bytes32 subscriptionId = keccak256(abi.encode(subscription));
+        bytes32 publishKey =
+            keccak256(abi.encode(srcSlotTxSlotPack, txIndexRLPEncoded, logIndex, subscriptionId));
         require(
             eventsPublished[publishKey] == PublishStatus.NOT_EXECUTED, "Event already published"
         );
 
-        {
-            (uint64 srcSlot, uint64 txSlot) = abi.decode(srcSlotTxSlotPack, (uint64, uint64));
-            requireLightClientDelay(srcSlot, subscription.sourceChainId);
-            bytes32 headerRoot =
-                telepathyRouter.lightClients(subscription.sourceChainId).headers(srcSlot);
-            require(headerRoot != bytes32(0), "HeaderRoot is missing");
-            bool isValid =
-                SSZ.verifyReceiptsRoot(receiptsRoot, receiptsRootProof, headerRoot, srcSlot, txSlot);
-            require(isValid, "Invalid receipts root proof");
-        }
+        (uint64 srcSlot, uint64 txSlot) = abi.decode(srcSlotTxSlotPack, (uint64, uint64));
+        requireLightClientDelay(srcSlot, subscription.sourceChainId);
+        bytes32 headerRoot =
+            telepathyRouter.lightClients(subscription.sourceChainId).headers(srcSlot);
+        require(headerRoot != bytes32(0), "HeaderRoot is missing");
+        bool isValid =
+            SSZ.verifyReceiptsRoot(receiptsRoot, receiptsRootProof, headerRoot, srcSlot, txSlot);
+        require(isValid, "Invalid receipts root proof");
 
         (bytes32[] memory eventTopics, bytes memory eventData) = EventProof.parseEvent(
             receiptProof,
@@ -65,9 +61,7 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
             subscription.eventSig
         );
 
-        _publish(
-            keccak256(abi.encode(subscription)), subscription, publishKey, eventTopics, eventData
-        );
+        _publish(subscriptionId, subscription, publishKey, txSlot, eventTopics, eventData);
     }
 
     /// @notice Checks that the light client for a given chainId is consistent.
@@ -102,24 +96,26 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
 
     /// @notice Executes the callback function on the subscriber, and marks the event publish as successful or failed.
     function _publish(
-        bytes32 subscriptionId,
-        Subscription calldata subscription,
-        bytes32 publishKey,
-        bytes32[] memory eventTopics,
-        bytes memory eventData
+        bytes32 _subscriptionId,
+        Subscription calldata _subscription,
+        bytes32 _publishKey,
+        uint64 _txSlot,
+        bytes32[] memory _eventTopics,
+        bytes memory _eventData
     ) internal {
-        bool status;
+        bool success;
         bytes memory data;
         {
             bytes memory receiveCall = abi.encodeWithSelector(
                 ISubscriptionReceiver.handlePublish.selector,
-                subscriptionId,
-                subscription.sourceChainId,
-                subscription.sourceAddress,
-                eventTopics,
-                eventData
+                _subscriptionId,
+                _subscription.sourceChainId,
+                _subscription.sourceAddress,
+                _txSlot,
+                _eventTopics,
+                _eventData
             );
-            (status, data) = subscription.callbackAddress.call(receiveCall);
+            (success, data) = _subscription.callbackAddress.call(receiveCall);
         }
 
         bool implementsHandler = false;
@@ -128,18 +124,18 @@ contract TelepathyPublisher is IPublisher, TelepathyStorage {
             implementsHandler = magic == ISubscriptionReceiver.handlePublish.selector;
         }
 
-        if (status && implementsHandler) {
-            eventsPublished[publishKey] = PublishStatus.EXECUTION_SUCCEEDED;
+        if (success && implementsHandler) {
+            eventsPublished[_publishKey] = PublishStatus.EXECUTION_SUCCEEDED;
         } else {
-            eventsPublished[publishKey] = PublishStatus.EXECUTION_FAILED;
+            eventsPublished[_publishKey] = PublishStatus.EXECUTION_FAILED;
         }
 
         emit Publish(
-            subscriptionId,
-            subscription.sourceChainId,
-            subscription.sourceAddress,
-            subscription.callbackAddress,
-            status
+            _subscriptionId,
+            _subscription.sourceChainId,
+            _subscription.sourceAddress,
+            _subscription.callbackAddress,
+            success
         );
     }
 }

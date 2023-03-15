@@ -10,14 +10,14 @@ library EventProof {
 
     /// @notice Verifies that the given log data is valid for the given event proof.
     function parseEvent(
-        bytes[] memory receiptProof,
-        bytes32 receiptRoot,
-        bytes memory txIndexRLPEncoded,
-        uint256 logIndex,
-        address sourceAddress,
-        bytes32 eventSig
+        bytes[] memory _receiptProof,
+        bytes32 _receiptRoot,
+        bytes memory _txIndexRLPEncoded,
+        uint256 _logIndex,
+        address _eventSource,
+        bytes32 _eventSig
     ) internal pure returns (bytes32[] memory, bytes memory) {
-        bytes memory value = MerkleTrie.get(txIndexRLPEncoded, receiptProof, receiptRoot);
+        bytes memory value = MerkleTrie.get(_txIndexRLPEncoded, _receiptProof, _receiptRoot);
         bytes1 txTypeOrFirstByte = value[0];
 
         // Currently, there are three possible transaction types on Ethereum. Receipts either come
@@ -52,30 +52,30 @@ library EventProof {
 
         // Read the logs from the receipts and check that it is not ill-formed
         RLPReader.RLPItem[] memory logs = valueAsList[3].readList();
-        require(logIndex < logs.length, "Log index out of bounds");
-        RLPReader.RLPItem[] memory relevantLog = logs[logIndex].readList();
+        require(_logIndex < logs.length, "Log index out of bounds");
+        RLPReader.RLPItem[] memory relevantLog = logs[_logIndex].readList();
 
         // Validate that the correct contract emitted the event
         address sourceContract = relevantLog[0].readAddress();
-        require(sourceContract == sourceAddress, "Event was not emitted by source contract");
+        require(sourceContract == _eventSource, "Event was not emitted by source contract");
 
         // Validate that the event signature matches
         bytes32[] memory topics = parseTopics(relevantLog[1].readList());
-        require(bytes32(topics[0]) == eventSig, "Event signature does not match");
+        require(bytes32(topics[0]) == _eventSig, "Event signature does not match");
 
         bytes memory data = relevantLog[2].readBytes();
 
         return (topics, data);
     }
 
-    function parseTopics(RLPReader.RLPItem[] memory topicsList)
+    function parseTopics(RLPReader.RLPItem[] memory _topicsRLPEncoded)
         private
         pure
         returns (bytes32[] memory)
     {
-        bytes32[] memory topics = new bytes32[](topicsList.length);
-        for (uint256 i = 0; i < topicsList.length; i++) {
-            topics[i] = bytes32(topicsList[i].readUint256());
+        bytes32[] memory topics = new bytes32[](_topicsRLPEncoded.length);
+        for (uint256 i = 0; i < _topicsRLPEncoded.length; i++) {
+            topics[i] = bytes32(_topicsRLPEncoded[i].readUint256());
         }
         return topics;
     }

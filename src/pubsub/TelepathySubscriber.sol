@@ -10,7 +10,7 @@ import {TelepathyStorage} from "src/pubsub/TelepathyStorage.sol";
 contract TelepathySubscriber is ISubscriber, TelepathyStorage {
     error SubscriptionAlreadyActive(bytes32 subscriptionId);
     error SubscriptionNotActive(bytes32 subscriptionId);
-    error InvalidBlockRange(uint256 startBlock, uint256 endBlock);
+    error InvalidSlotRange(uint64 startSlot, uint64 endSlot);
 
     /// @dev The block ranges use as a signal to off-chain, and are NOT enforced by the publisher.
     ///     If events should only a certain range should be valid, the callbackAddress should do their
@@ -20,8 +20,8 @@ contract TelepathySubscriber is ISubscriber, TelepathyStorage {
         address _sourceAddress,
         address _callbackAddress,
         bytes32 _eventSig,
-        uint256 _startBlock,
-        uint256 _endBlock
+        uint64 _startSlot,
+        uint64 _endSlot
     ) external returns (bytes32) {
         Subscription memory subscription =
             Subscription(_sourceChainId, _sourceAddress, _callbackAddress, _eventSig);
@@ -32,12 +32,12 @@ contract TelepathySubscriber is ISubscriber, TelepathyStorage {
         }
         subscriptions[subscriptionId] = SubscriptionStatus.SUBSCRIBED;
 
-        // Either both blocks are 0, or endBlock is must greater than startBlock.
-        if (_endBlock < _startBlock) {
-            revert InvalidBlockRange(_startBlock, _endBlock);
+        // Either both block's slots are 0, or endSlot is must greater than startSlot.
+        if (_endSlot < _startSlot) {
+            revert InvalidSlotRange(_startSlot, _endSlot);
         }
 
-        emit Subscribe(subscriptionId, _startBlock, _endBlock, subscription);
+        emit Subscribe(subscriptionId, _startSlot, _endSlot, subscription);
 
         return subscriptionId;
     }

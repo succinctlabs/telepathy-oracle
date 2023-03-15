@@ -31,6 +31,7 @@ contract CounterSubscriber is SubscriptionReceiver {
 
     error InvalidSourceChain(uint32 sourceChainId);
     error InvalidSourceAddress(address sourceAddress);
+    error InvalidSlot(uint64 slot);
     error InvalidSubscriptionId(bytes32 subscriptionId);
     error InvalidEventSig(bytes32 eventSig);
 
@@ -39,19 +40,27 @@ contract CounterSubscriber is SubscriptionReceiver {
 
     uint32 immutable EVENT_SOURCE_CHAIN_ID;
     address immutable EVENT_SOURCE_ADDRESS;
+    uint64 immutable START_SLOT;
+    uint64 immutable END_SLOT;
 
     mapping(bytes32 => bool) activeSubscriptions;
 
-    constructor(address _telepathyPubSub, uint32 _sourceChainId, address _sourceAddress)
-        SubscriptionReceiver(_telepathyPubSub)
-    {
+    constructor(
+        address _telepathyPubSub,
+        uint32 _sourceChainId,
+        address _sourceAddress,
+        uint64 _startSlot,
+        uint64 _endSlot
+    ) SubscriptionReceiver(_telepathyPubSub) {
         EVENT_SOURCE_CHAIN_ID = _sourceChainId;
         EVENT_SOURCE_ADDRESS = _sourceAddress;
+        START_SLOT = _startSlot;
+        END_SLOT = _endSlot;
     }
 
     function subscribeToIncEvent(uint32 _sourceChainId, address _sourceAddress) external {
         bytes32 subscriptionId = telepathyPubSub.subscribe(
-            _sourceChainId, _sourceAddress, address(this), INCREMENT_EVENT_SIG, 0, 0
+            _sourceChainId, _sourceAddress, address(this), INCREMENT_EVENT_SIG, START_SLOT, END_SLOT
         );
         activeSubscriptions[subscriptionId] = true;
     }
@@ -64,7 +73,7 @@ contract CounterSubscriber is SubscriptionReceiver {
 
     function subscribeToDecEvent(uint32 _sourceChainId, address _sourceAddress) external {
         bytes32 subscriptionId = telepathyPubSub.subscribe(
-            _sourceChainId, _sourceAddress, address(this), DECREMENT_EVENT_SIG, 0, 0
+            _sourceChainId, _sourceAddress, address(this), DECREMENT_EVENT_SIG, START_SLOT, END_SLOT
         );
         activeSubscriptions[subscriptionId] = true;
     }
@@ -79,6 +88,7 @@ contract CounterSubscriber is SubscriptionReceiver {
         bytes32 _subscriptionId,
         uint32 _sourceChainId,
         address _sourceAddress,
+        uint64 _slot,
         bytes32[] memory eventTopics,
         bytes memory eventdata
     ) internal override {
@@ -88,6 +98,10 @@ contract CounterSubscriber is SubscriptionReceiver {
 
         if (_sourceAddress != EVENT_SOURCE_ADDRESS) {
             revert InvalidSourceAddress(_sourceAddress);
+        }
+
+        if (_slot < START_SLOT || _slot > END_SLOT) {
+            revert InvalidSlot(_slot);
         }
 
         if (!activeSubscriptions[_subscriptionId]) {

@@ -16,13 +16,16 @@ abstract contract SubscriptionReceiver is ISubscriptionReceiver {
         bytes32 _subscriptionId,
         uint32 _sourceChainId,
         address _sourceAddress,
+        uint64 _slot,
         bytes32[] memory _eventTopics,
         bytes memory _eventdata
     ) external override returns (bytes4) {
         if (msg.sender != address(telepathyPubSub)) {
             revert NotFromTelepathyPubSub(msg.sender);
         }
-        handlePublishImpl(_subscriptionId, _sourceChainId, _sourceAddress, _eventTopics, _eventdata);
+        handlePublishImpl(
+            _subscriptionId, _sourceChainId, _sourceAddress, _slot, _eventTopics, _eventdata
+        );
         return ISubscriptionReceiver.handlePublish.selector;
     }
 
@@ -30,6 +33,7 @@ abstract contract SubscriptionReceiver is ISubscriptionReceiver {
         bytes32 _subscriptionId,
         uint32 _sourceChainId,
         address _sourceAddress,
+        uint64 _slot,
         bytes32[] memory _eventTopics,
         bytes memory _eventdata
     ) internal virtual;
