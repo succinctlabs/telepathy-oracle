@@ -6,6 +6,10 @@ import {SubscriptionReceiver} from "src/pubsub/interfaces/SubscriptionReceiver.s
 import {BasicHomeAMB} from "tokenbridge/upgradeable_contracts/arbitrary_message/BasicHomeAMB.sol";
 import {ArbitraryMessage} from "tokenbridge/libraries/ArbitraryMessage.sol";
 
+/// @title TelepathyValidator
+/// @author Succinct Labs
+/// @notice A validator for the ETH (Foreign) -> Gnosis (Home) bridge that relies on the Telepathy Protocol
+///         for proof of consensus in verifying the UserRequestForAffirmation event was emitted on Ethereum.
 contract TelepathyValidator is SubscriptionReceiver {
     error InvalidSourceChain(uint32 sourceChainId);
     error InvalidSourceAddress(address sourceAddress);
@@ -39,7 +43,7 @@ contract TelepathyValidator is SubscriptionReceiver {
         END_SLOT = _endSlot;
     }
 
-    function subscribeToAffirmationEvent() external {
+    function subscribeToAffirmationEvent() external returns (bytes32) {
         subscriptionId = telepathyPubSub.subscribe(
             EVENT_SOURCE_CHAIN_ID,
             EVENT_SOURCE_ADDRESS,
@@ -48,6 +52,7 @@ contract TelepathyValidator is SubscriptionReceiver {
             START_SLOT,
             END_SLOT
         );
+        return subscriptionId;
     }
 
     /// @notice Handle the published affirmation event by executing the affirmation in the Home AMB.
