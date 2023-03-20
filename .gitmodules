@@ -7,3 +7,7 @@
 	path = lib/telepathy-contracts
 	url = https://github.com/succinctlabs/telepathy-contracts
 	branch = main
+[submodule "lib/tokenbridge"]
+	path = lib/tokenbridge
+	url = https://github.com/omni/tokenbridge
+	branch = 3.7.0
