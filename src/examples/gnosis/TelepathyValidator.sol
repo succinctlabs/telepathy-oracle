@@ -3,7 +3,8 @@ pragma solidity ^0.8.16;
 import {TelepathyPubSub} from "src/pubsub/TelepathyPubSub.sol";
 import {SubscriptionReceiver} from "src/pubsub/interfaces/SubscriptionReceiver.sol";
 
-import {BasicHomeAMB} from "tokenbridge-contracts/contracts/upgradeable_contracts/arbitrary_message/BasicHomeAMB.sol"
+import {BasicHomeAMB} from
+    "tokenbridge-contracts/contracts/upgradeable_contracts/arbitrary_message/BasicHomeAMB.sol";
 import {ArbitraryMessage} from "tokenbridge-contracts/contracts/libraries/ArbitraryMessage.sol";
 
 contract TelepathyValidator is SubscriptionReceiver {
@@ -41,7 +42,12 @@ contract TelepathyValidator is SubscriptionReceiver {
 
     function subscribeToAffirmationEvent() external {
         subscriptionId = telepathyPubSub.subscribe(
-            EVENT_SOURCE_CHAIN_ID, EVENT_SOURCE_ADDRESS, address(this), INCREMENT_EVENT_SIG, START_SLOT, END_SLOT
+            EVENT_SOURCE_CHAIN_ID,
+            EVENT_SOURCE_ADDRESS,
+            address(this),
+            INCREMENT_EVENT_SIG,
+            START_SLOT,
+            END_SLOT
         );
     }
 
@@ -69,21 +75,12 @@ contract TelepathyValidator is SubscriptionReceiver {
         if (_subscriptionId != subscriptionId) {
             revert InvalidSubscriptionId(_subscriptionId);
         }
-        
+
         if (eventTopics[0] != AFFIRMATION_EVENT_SIG) {
             revert InvalidEventSig(eventTopics[0]);
         }
 
-
-        // decode step 1
-        // bytes memory eventData = abi.encodePacked(header, _data);
-        // (bytes32 _messageId, bytes memory header) = _packHeader(_contract, _gas, _dataType);
-
-        // bytes memory eventData = abi.encodePacked(header, _data);
-
-        // emitEventOnMessageRequest(_messageId, eventData);
-
-        (,bytes memory data) = abi.decode(eventdata, (bytes, bytes));
-        BasicHomeAMB.executeAffirmation(message)
+        (, bytes memory data) = abi.decode(eventdata, (bytes, bytes));
+        BasicHomeAMB.executeAffirmation(message);
     }
 }
