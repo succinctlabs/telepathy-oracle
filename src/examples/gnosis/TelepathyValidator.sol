@@ -3,18 +3,17 @@ pragma solidity ^0.8.16;
 import {TelepathyPubSub} from "src/pubsub/TelepathyPubSub.sol";
 import {SubscriptionReceiver} from "src/pubsub/interfaces/SubscriptionReceiver.sol";
 
-import {BasicHomeAMB} from
-    "tokenbridge-contracts/contracts/upgradeable_contracts/arbitrary_message/BasicHomeAMB.sol";
-import {ArbitraryMessage} from "tokenbridge-contracts/contracts/libraries/ArbitraryMessage.sol";
+import {BasicHomeAMB} from "tokenbridge/upgradeable_contracts/arbitrary_message/BasicHomeAMB.sol";
+import {ArbitraryMessage} from "tokenbridge/libraries/ArbitraryMessage.sol";
 
 contract TelepathyValidator is SubscriptionReceiver {
     error InvalidSourceChain(uint32 sourceChainId);
     error InvalidSourceAddress(address sourceAddress);
     error InvalidSlot(uint64 slot);
     error InvalidSubscriptionId(bytes32 subscriptionId);
-    error InvalidEventSig(bytes32 eventSig);
 
-    // event UserRequestForAffirmation(bytes32 indexed messageId, bytes encodedData);
+    /// @dev Listen for event UserRequestForAffirmation(bytes32 indexed messageId, bytes encodedData)
+    ///      where the encodedData is the ABI encoded message from the Foreign AMB.
     bytes32 constant AFFIRMATION_EVENT_SIG = keccak256("UserRequestForAffirmation(bytes32,bytes)");
 
     uint32 immutable EVENT_SOURCE_CHAIN_ID;
@@ -52,6 +51,7 @@ contract TelepathyValidator is SubscriptionReceiver {
     }
 
     /// @notice Handle the published affirmation event by executing the affirmation in the Home AMB.
+    /// @dev We decode 'abi.encodePacked(header, _data)' to extract just the encoded message '_data' from the event.
     function handlePublishImpl(
         bytes32 _subscriptionId,
         uint32 _sourceChainId,
@@ -76,11 +76,7 @@ contract TelepathyValidator is SubscriptionReceiver {
             revert InvalidSubscriptionId(_subscriptionId);
         }
 
-        if (eventTopics[0] != AFFIRMATION_EVENT_SIG) {
-            revert InvalidEventSig(eventTopics[0]);
-        }
-
         (, bytes memory data) = abi.decode(eventdata, (bytes, bytes));
-        BasicHomeAMB.executeAffirmation(message);
+        BasicHomeAMB.executeAffirmation(data);
     }
 }
