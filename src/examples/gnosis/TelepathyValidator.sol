@@ -3,10 +3,6 @@ pragma solidity ^0.8.16;
 import {TelepathyPubSub} from "src/pubsub/TelepathyPubSub.sol";
 import {SubscriptionReceiver} from "src/pubsub/interfaces/SubscriptionReceiver.sol";
 
-interface IBasicHomeAMB {
-    function executeAffirmation(bytes calldata message) external;
-}
-
 /// @title TelepathyValidator
 /// @author Succinct Labs
 /// @notice A validator for the ETH (Foreign) -> Gnosis (Home) bridge that relies on the Telepathy Protocol
@@ -85,6 +81,10 @@ contract TelepathyValidator is SubscriptionReceiver {
         (, bytes memory data) = abi.decode(eventdata, (bytes, bytes));
         HOME_AMB.executeAffirmation(data);
     }
+}
+
+interface IBasicHomeAMB {
+    function executeAffirmation(bytes calldata message) external;
 }
 
 library ArbitraryMessage {

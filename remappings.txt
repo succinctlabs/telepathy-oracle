@@ -7,4 +7,3 @@ optimism-bedrock-contracts/=lib/telepathy-contracts/lib/optimism-bedrock-contrac
 telepathy-contracts/=lib/telepathy-contracts/src/
 v3-core/=lib/telepathy-contracts/lib/v3-core/
 ens-contracts/=lib/ens-contracts/contracts/
-tokenbridge/=lib/tokenbridge/contracts/contracts/
