@@ -2,12 +2,15 @@ pragma solidity ^0.8.16;
 
 import {TelepathyPubSub} from "src/pubsub/TelepathyPubSub.sol";
 import {SubscriptionReceiver} from "src/pubsub/interfaces/SubscriptionReceiver.sol";
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /// @title TelepathyValidator
 /// @author Succinct Labs
 /// @notice A validator for the ETH (Foreign) -> Gnosis (Home) bridge that relies on the Telepathy Protocol
 ///         for proof of consensus in verifying the UserRequestForAffirmation event was emitted on Ethereum.
-contract TelepathyValidator is SubscriptionReceiver {
+contract TelepathyValidator is SubscriptionReceiver, Ownable {
+    event AffirmationHandled(bytes32 indexed messageId, bytes header, bytes data);
+
     error InvalidSourceChain(uint32 sourceChainId);
     error InvalidSourceAddress(address sourceAddress);
     error InvalidSlot(uint64 slot);
@@ -24,6 +27,7 @@ contract TelepathyValidator is SubscriptionReceiver {
     IBasicHomeAMB immutable HOME_AMB;
 
     bytes32 public subscriptionId;
+    bool executeAffirmationsEnabled;
 
     constructor(
         address _telepathyPubSub,
@@ -31,16 +35,22 @@ contract TelepathyValidator is SubscriptionReceiver {
         address _sourceAddress,
         uint64 _startSlot,
         uint64 _endSlot,
-        address _homeAMB
+        address _homeAMB,
+        address _owner
     ) SubscriptionReceiver(_telepathyPubSub) {
         EVENT_SOURCE_CHAIN_ID = _sourceChainId;
         EVENT_SOURCE_ADDRESS = _sourceAddress;
         START_SLOT = _startSlot;
         END_SLOT = _endSlot;
         HOME_AMB = IBasicHomeAMB(_homeAMB);
+        transferOwnership(_owner);
     }
 
-    function subscribeToAffirmationEvent() external returns (bytes32) {
+    function toggleExecuteAffirmations() external onlyOwner {
+        executeAffirmationsEnabled = !executeAffirmationsEnabled;
+    }
+
+    function subscribeToAffirmationEvent() external onlyOwner returns (bytes32) {
         subscriptionId = telepathyPubSub.subscribe(
             EVENT_SOURCE_CHAIN_ID,
             EVENT_SOURCE_ADDRESS,
@@ -78,8 +88,13 @@ contract TelepathyValidator is SubscriptionReceiver {
             revert InvalidSubscriptionId(_subscriptionId);
         }
 
-        (, bytes memory data) = abi.decode(eventdata, (bytes, bytes));
-        HOME_AMB.executeAffirmation(data);
+        (bytes memory header, bytes memory data) = abi.decode(eventdata, (bytes, bytes));
+
+        if (executeAffirmationsEnabled) {
+            HOME_AMB.executeAffirmation(data);
+        }
+
+        emit AffirmationHandled(eventTopics[1], header, data);
     }
 }
 
@@ -87,6 +102,7 @@ interface IBasicHomeAMB {
     function executeAffirmation(bytes calldata message) external;
 }
 
+/// @notice Copied from tokenbridge-contracts for solidity compiler compatibility.
 library ArbitraryMessage {
     /**
      * @dev Unpacks data fields from AMB message
@@ -101,7 +117,7 @@ library ArbitraryMessage {
      * offset 110             : 1 bytes  :: uint8   - dataType
      * offset 111             : X bytes  :: bytes   - source chain id
      * offset 111 + X         : Y bytes  :: bytes   - destination chain id
-     * 
+     *
      * NOTE: when message structure is changed, make sure that MESSAGE_PACKING_VERSION from VersionableAMB is updated as well
      * NOTE: assembly code uses calldatacopy, make sure that message is passed as the first argument in the calldata
      * @param _data encoded message

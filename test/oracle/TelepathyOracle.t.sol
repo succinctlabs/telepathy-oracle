@@ -92,9 +92,7 @@ contract TelepathyOracleTest is Test {
 
     function testRevertNotFromRouter() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                TelepathyHandler.NotFromTelepathyReceiever.selector, address(this)
-            )
+            abi.encodeWithSelector(TelepathyHandler.NotFromTelepathyRouter.selector, address(this))
         );
         oracle.handleTelepathy(FULFILLER_CHAIN, address(fulfiller), "");
     }
